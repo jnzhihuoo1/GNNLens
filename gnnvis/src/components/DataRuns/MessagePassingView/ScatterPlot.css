@@ -1,0 +1,13 @@
+.links line {
+    stroke-opacity: 0.6;
+  }
+  
+  .nodes circle {
+    stroke-width: 1.5px;
+  }
+  
+  text {
+    font-family: sans-serif;
+    font-size: 15px;
+  }
+  

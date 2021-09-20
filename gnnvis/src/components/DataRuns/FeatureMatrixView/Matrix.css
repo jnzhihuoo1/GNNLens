@@ -1,0 +1,27 @@
+rect.bordered {
+  stroke: #E6E6E6;
+  stroke-width:2px;
+}
+ text .x-axis{
+  font-size: 9pt;
+  font-family: Consolas, courier;
+  fill: #000;
+  transform: rotate(-21deg);
+}
+
+text .y-axis{
+  font-size: 9pt;
+  font-family: Consolas, courier;
+  fill: #000;
+}
+div#tooltip_matrix {	
+    position: absolute;        
+    display: inline-block;
+    padding: 1px;
+    font-family: 'Open Sans' sans-serif;
+    color: #000;
+    background-color: #fff;
+    border: 1px solid #999;
+    border-radius: 2px;
+    pointer-events: none;
+}

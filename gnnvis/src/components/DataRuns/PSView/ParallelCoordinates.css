@@ -1,0 +1,23 @@
+div.parallelCoordinates{
+  }
+  
+  g.inactive path, g.active path{
+    fill: none;
+    stroke: lightgrey;
+    stroke-linecap:"round";
+    
+  }
+  g.active path{
+    stroke:#FE8F2E;
+  }
+  g.feature .title {
+    font-size: 12px;
+    fill: #222;
+    text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
+  }
+  g.feature g.tick text {
+    fill: #222;
+    text-shadow: 0 1px 0 #fff, 1px 0 0 #fff, 0 -1px 0 #fff, -1px 0 0 #fff;
+  }
+  /*     transform: rotate(-21deg) translate(-5px,-6px);
+ */
