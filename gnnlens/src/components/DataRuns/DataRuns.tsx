@@ -394,7 +394,7 @@ export default class DataRuns extends React.Component<IProps, IState>{
         let max_row_num = Math.floor(this.props.contentHeight / 40);
         // small width, height: 1707 724
         // big width, height: 2560 1175
-        let ControlPanelH = 3;
+        let ControlPanelH = 4;
         let PSPanelH = max_row_num - ControlPanelH;
         let ProjectionPanelH = Math.floor(max_row_num / 2);
         let RH = max_row_num - ProjectionPanelH;

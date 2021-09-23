@@ -1,11 +1,12 @@
 import * as React from 'react';
 import "./SelectedNodeList.css";
-import { Tag,  Switch, Button} from 'antd';
+import { Tag,  Switch, Button, Select} from 'antd';
 import {getLayoutMode, compareSelectedNodeIdList, getNodeStatisticStr, constructNeighborSet, getCoraNodeColor, getTrainColor} from '../../../helper';
 import ProjectionView from './ProjectionView';
 import { cluster, line } from 'd3';
 import ProjectionViewNodeStatisticContainer from '../../../container/ProjectionViewNodeStatisticContainer';
 import ProjectionViewComputing from './ProjectionViewComputing';
+const Option = Select.Option;
 
 export interface SelectedNodeListProps {
     refreshnumber:number,
@@ -23,9 +24,10 @@ export interface SelectedNodeListProps {
 
 export interface SelectedNodeListState {
     currentPage:number,
-    
+    enableLegends:boolean,
     enableLines:boolean,
-    aggregationMode:number
+    aggregationMode:number,
+    layoutMode:number
 
 }
 
@@ -36,14 +38,19 @@ export default class SelectedNodeList extends React.Component<SelectedNodeListPr
     constructor(props: SelectedNodeListProps) {
         super(props);
         this.onChangeHighLightNodeIdList = this.onChangeHighLightNodeIdList.bind(this);
+        this.onChangeHoveredNodeIdList = this.onChangeHoveredNodeIdList.bind(this);
         this.renderLines = this.renderLines.bind(this);
         this.onChangeLines = this.onChangeLines.bind(this);
+        this.onChangeLegends = this.onChangeLegends.bind(this);
         this.updateSingleHighlightNodeStatus = this.updateSingleHighlightNodeStatus.bind(this);
+        this.onLayoutModeChange = this.onLayoutModeChange.bind(this);
         this.state = {
             currentPage: 1,
+            enableLegends : true,
             //highlightNodeIdList: [],
             enableLines : true,
-            aggregationMode: 1 // 1-->Aggregation by clustering, 2--> Do not aggregation. 
+            aggregationMode: 1, // 1-->Aggregation by clustering, 2--> Do not aggregation. 
+            layoutMode: 1 // 1--> tSNE,  2--> UMAP
         };
     }
     componentDidMount(){
@@ -55,6 +62,7 @@ export default class SelectedNodeList extends React.Component<SelectedNodeListPr
             this.props.changeSelectedNodeIdList(this.thisSelectedNodeIdList)
             this.prevSelectedNodeIdList = this.thisSelectedNodeIdList.slice();
             this.InsProjectionViewComputing.updateHighlightNodeIdList([]);
+            this.InsProjectionViewComputing.updateHoveredNodeIdList([]);
             //this.setState({
             //    highlightNodeIdList: []
             //})
@@ -112,6 +120,15 @@ export default class SelectedNodeList extends React.Component<SelectedNodeListPr
         this.InsProjectionViewComputing.updateNodeStatistic(this.props.changeProjectionViewSelectedNodes, this.props.changeProjectionViewTotalNodeNum);
         this.renderLines();
     }
+    public onChangeHoveredNodeIdList(rawNodeIdList:any, hoveredNodeIdList:any, showMode:number){
+        //console.log("onChangeHoveredNodeIDList", rawNodeIdList, hoveredNodeIdList, showMode);
+        if(hoveredNodeIdList.length === 0){
+            this.InsProjectionViewComputing.updateHoveredNodeIdList(hoveredNodeIdList.slice(),showMode,[]);
+        }else{
+            this.InsProjectionViewComputing.updateHoveredNodeIdList(hoveredNodeIdList.slice(),showMode,rawNodeIdList.slice());
+        }
+        this.renderLines();        
+    }
     public updateSingleHighlightNodeStatus(showMode:number){
         this.InsProjectionViewComputing.updateFullHighlightStatus(showMode);
     }
@@ -120,10 +137,20 @@ export default class SelectedNodeList extends React.Component<SelectedNodeListPr
             enableLines : e
         })
     }
+    public onChangeLegends(e:any){
+        this.setState({
+            enableLegends : e
+        })
+    }
     public onChangeAggregationMode(e:any){
        this.setState({
            aggregationMode: e
        }) 
+    }
+    public onLayoutModeChange(e:any){
+        this.setState({
+            layoutMode: e
+        })
     }
     public render() {
         /*
@@ -132,7 +159,7 @@ export default class SelectedNodeList extends React.Component<SelectedNodeListPr
         */
         let {filters,PCPJson} = this.props;
         console.log("Selected Node List", filters, PCPJson);
-        
+        let layoutMode = this.state.layoutMode;
         /**
          * Data specification:
          * 
@@ -189,6 +216,7 @@ export default class SelectedNodeList extends React.Component<SelectedNodeListPr
         
         let marginLeft = 20, marginRight = 20;
         let marginTop = 20, marginBottom = 62;
+        let legend_height = 110;
         let projectionHeight = this.props.height - marginBottom - marginTop;
         let gap = 10;
         let projectionWidth = (this.props.width - marginLeft - marginRight) / 4  - gap;
@@ -201,6 +229,10 @@ export default class SelectedNodeList extends React.Component<SelectedNodeListPr
             [3, "Training nodes structure influence"],
             [4, "Training nodes feature influence"],
         ]
+        let layoutOptions = [
+            [1,"t-SNE"],
+            [2,"UMAP"]
+        ];
         let generateAggregationModeButton = () =>{
             if(this.state.aggregationMode === 1){
                 return <Button type="default" size="small" onClick={()=>{this.onChangeAggregationMode(2)}}>Detail</Button>;
@@ -208,6 +240,7 @@ export default class SelectedNodeList extends React.Component<SelectedNodeListPr
                 return <Button type="primary" size="small" onClick={()=>{this.onChangeAggregationMode(1)}}>Cluster</Button>
             }
         }
+        let onChangeLegends = this.onChangeLegends;
         let onChangeLines = this.onChangeLines;
         if(selectedNodeIdList.length>0&&selectedNodeIdList.length<300){
             if(!compareSelectedNodeIdList(this.prevSelectedNodeIdList,this.thisSelectedNodeIdList)){
@@ -225,11 +258,29 @@ export default class SelectedNodeList extends React.Component<SelectedNodeListPr
 
             //this.props.changeProjectionViewSelectedNodes(rawHighlightNodeIdList.length);
             //<Tag>{getNodeStatisticStr(rawHighlightNodeIdList.length, selectedNodeIdList.length)}</Tag>
+            //, overflowX: "scroll"
             return (
-                <div style={{width: "100%", height:""+(this.props.height - 10)+"px", overflowX: "scroll"}}>
+                <div style={{width: "100%", height:""+(this.props.height - 10)+"px"}}>
                     <div className="ViewTitle">Projection View
                     <div style={{float:'right'}}>
                         {generateAggregationModeButton()}
+                        &nbsp;&nbsp;&nbsp;&nbsp;
+                        Layout:&nbsp;
+                        <Select
+                            placeholder="Select a layout"
+                            value={layoutMode}
+                            style={{ width: '90px' }}
+                            onChange={this.onLayoutModeChange}
+                            size="small"
+                        >
+                            {layoutOptions.map((d:any)=>(
+                                <Option value={d[0]} key={d[0]}>
+                                    {d[1]}
+                                </Option>
+                            ))}
+                            </Select>
+                        &nbsp;&nbsp;&nbsp;&nbsp;
+                        Legend: <Switch checked={this.state.enableLegends} onChange={onChangeLegends} />
                         &nbsp;&nbsp;&nbsp;&nbsp;
                         Links: <Switch checked={this.state.enableLines} onChange={onChangeLines} />
                         &nbsp;&nbsp;&nbsp;&nbsp;
@@ -257,9 +308,12 @@ export default class SelectedNodeList extends React.Component<SelectedNodeListPr
                                 name={d[1]}
                                 selectedNodeIdList={selectedNodeIdList}
                                 onChangeHighLightNodeIdList={this.onChangeHighLightNodeIdList}
+                                onChangeHoveredNodeIdList={this.onChangeHoveredNodeIdList}
                                 renderLines={this.renderLines}
                                 dataPackage={this.InsProjectionViewComputing.getDataPackage(d[0],this.state.aggregationMode)}
                                 updateSingleHighlightNodeStatus={this.updateSingleHighlightNodeStatus}
+                                enableLegends={this.state.enableLegends}
+                                layoutMode={this.state.layoutMode}
                                 />
                             })}
                             

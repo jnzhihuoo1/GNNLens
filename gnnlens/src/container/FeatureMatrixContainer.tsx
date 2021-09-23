@@ -10,7 +10,8 @@ const mapStateToProps = (state: StoreState) => ({
     specificNodeIdList : state.specificNodeIdList,
     showSource: state.showSource,
     select_inspect_node: state.select_inspect_node,
-    extendedMode: state.extendedMode
+    extendedMode: state.extendedMode,
+    K_value: state.K_value
 
 })
 

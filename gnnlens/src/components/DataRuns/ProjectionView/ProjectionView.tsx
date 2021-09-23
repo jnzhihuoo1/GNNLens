@@ -2,6 +2,10 @@ import * as React from 'react';
 import { Select} from 'antd';
 import "./ProjectionView.css";
 import {getCoraNodeColor, compareSelectedNodeIdList} from '../../../helper';
+import { UMAP } from 'umap-js';
+import { min } from 'd3-array';
+
+
 //import { SELECTED_MESSAGE_PASSING_NODE_ID_LIST_CHANGE } from '../../../constants';
 //import reorder from '../FeatureMatrixView/reorder.v1';
 const d3 = require("d3");
@@ -33,9 +37,12 @@ export interface ProjectionViewProps {
     y:number,
     name:string,
     onChangeHighLightNodeIdList:any,
+    onChangeHoveredNodeIdList:any,
     renderLines:any,
     dataPackage:any,
-    updateSingleHighlightNodeStatus:any
+    updateSingleHighlightNodeStatus:any,
+    enableLegends:boolean,
+    layoutMode:number
 }
 
 export interface ProjectionViewState {
@@ -69,13 +76,20 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         this.renderD3();
     }
     componentDidUpdate(prevProps:ProjectionViewProps, prevState:ProjectionViewState){
-        if(!compareSelectedNodeIdList(prevProps.selectedNodeIdList,this.props.selectedNodeIdList) || prevProps.dataPackage["mode"]!==this.props.dataPackage["mode"]){
+        if(!compareSelectedNodeIdList(prevProps.selectedNodeIdList,this.props.selectedNodeIdList) || 
+                prevProps.dataPackage["mode"]!==this.props.dataPackage["mode"] ){
             //this.onSelectedNodeListChange(this.props.selectedNodeIdList);
             this.renderD3();
+            return;
         }else{
-            if( prevProps.showMode !== this.props.showMode){
+            if( prevProps.showMode !== this.props.showMode || prevProps.layoutMode !== this.props.layoutMode){
                 this.renderD3();
+                return;
             }
+        }
+        if(prevProps.enableLegends !== this.props.enableLegends){
+            this.renderInViewLegend();
+            return;
         }
         //if(!compareSelectedNodeIdList(prevProps.highlightNodeIdList, this.props.highlightNodeIdList)){
             //this.updateHighlightStatus();
@@ -86,6 +100,9 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
     public onSelectedNodeListChange(selectedNodeList:any, highlightNodeIdList:any, showMode:number){
         this.props.onChangeHighLightNodeIdList(selectedNodeList, highlightNodeIdList, showMode);
     } 
+    public onHoveredNodeListChange(rawNodeList:any, hoveredNodeIdList:any, showMode:number){
+        this.props.onChangeHoveredNodeIdList(rawNodeList, hoveredNodeIdList, showMode);
+    } 
     public hiddenTooltip(){
         d3.select("#tooltip_proj").style('opacity', 0);
     }
@@ -94,6 +111,9 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
     }
     public handleGlyphMouseOut(e:any){
        this.hiddenTooltip();
+       let showMode = this.props.showMode;
+       this.onHoveredNodeListChange([], [], showMode);
+
     }
     public constructPathOnNodeList(nodelist:any){
         let path = "";
@@ -514,9 +534,9 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                         let s_scale = (enable_size)?getSizeScale(d.data.size):1; 
                         return rect_height * s_scale;
                     })
-                    .attr("fill", function(d:any) { return d.data.Color[4]; })
-                    .style("stroke","#bbb")
-                    .style("stroke-width",1);
+                    .attr("fill", function(d:any) { return d.data.Color[4]; });
+                    //.style("stroke","#bbb")
+                    //.style("stroke-width",1);
         let rect_gap = 0.25;
         let gnnrect_enter = node_enter.append("rect").attr("class","gnnrect");
         let gnnrects = nodes.select("rect.gnnrect");
@@ -580,7 +600,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                     let dis:any = d.data.Transformed_Distance;
                     let s_scale = (enable_size)?getSizeScale(d.data.size):1;
                     let left = -(rect_width)*s_scale;
-                    let top = -(rect_height) / 2 * s_scale - 2;
+                    let top = -(rect_height) / 2 * s_scale - 4;
                     let width = 2*rect_width*s_scale
                     let start_point = [left , top]
                     if(dis>1){
@@ -812,9 +832,9 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                         let s_scale = (enable_size)?getSizeScale(d.data.size):1; 
                         return rect_height * s_scale;
                     })
-                    .attr("fill", function(d:any) { return d.data.Color[4]; })
-                    .style("stroke","#bbb")
-                    .style("stroke-width",1);
+                    .attr("fill", function(d:any) { return d.data.Color[4]; });
+                   // .style("stroke","#bbb")
+                   // .style("stroke-width",1);
 
         let gnnrect_enter = node_enter.append("rect").attr("class","gnnrect");
         let gnnrects = nodes.select("rect.gnnrect");
@@ -997,38 +1017,13 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
             this.wrapLines(text);
         }
     }
-    public handleTitleMouseMove(e:any, configuration:any, additional_info:any){
-        //console.log("handleTitleMouseMove",e);
-        var xy:any;
-        
-        //xy = d3.mouse(this);
-        xy = [d3.event.pageX, d3.event.pageY];
-        
-        let svgWidth = 100;
-        let svgHeight = 100;
-        let showMode = this.props.showMode;
-        if(showMode === 1){
-            svgWidth = 190;
-            svgHeight = 100;
-        }else if(showMode === 2){
-            svgWidth = 300;
-            svgHeight = 100;
-        }else if(showMode === 3){
-            svgWidth = 210;
-            svgHeight = 60+10;
-        }else if(showMode === 4){
-            svgWidth = 280;
-            svgHeight = 60;
-        }
-        var tooltip_proj = d3.select('#tooltip_proj')
-                            .style('opacity', 0.95)
-                            .style('top', (xy[1] - svgHeight) + 'px')
-                            .style('left', (xy[0] + 10) + 'px')
-        ;
-        tooltip_proj.selectAll("*").remove();
-        var tooltip_svg = tooltip_proj.append("svg")
-        .attr("width", svgWidth)
-        .attr("height", svgHeight);
+    public renderLegend(data_package:any){
+        let configuration = data_package["configuration"];
+        let tooltip_svg = data_package["tooltip_svg"];
+        let additional_info = data_package["additional_info"];
+        let e = data_package["e"];
+        let showMode = data_package["showMode"];
+        let legendMode = data_package["legendMode"]; // 1 - hovering, 2 - static
         // ---------------------- Render Glyph -------------------------- //
         var radius = configuration["radius"];
         var radius_gap = 0.3;
@@ -1048,6 +1043,10 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         if(showMode === 1){
             let legend_x = 30;
             let legend_y = 50;
+            if(legendMode === 2){
+                legend_x = 30;
+                legend_y = 50;
+            }
             let legned_scale = 2;
             let legend_Color = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#fff"];
             let legend_conf = 0.66;
@@ -1077,12 +1076,13 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                     "y_offset":+19
                 },
                 {
-                    "text":"Confidence",
+                    "text":"Conf.",
                     "text-anchor":"begin",
                     "dominant-baseline":"central",
                     "y_offset":0
                 },
             ]
+            /** "text":"Confidence" */
             let legend_configuration = {
                 "legend_x":legend_x,
                 "legend_y":legend_y,
@@ -1109,36 +1109,43 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
             }
             let legend_text_setting = [
                 {
-                    "text":"DEG/MAX_DEG",
+                    "text":"DEG",
                     "text-anchor":"begin",
                     "dominant-baseline":"central",
                     "y_offset":+16
                 },
                 {
-                    "text":"Label consistency",
+                    "text":"Label cons.",
                     "text-anchor":"begin",
                     "dominant-baseline":"central",
                     "y_offset":+16
                 },
                 {
-                    "text":"Label - prediction consistency",
+                    "text":"L. - p. cons.",
                     "text-anchor":"begin",
                     "dominant-baseline":"central",
                     "y_offset":+0
                 },
                 {
-                    "text":"Prediction - label consistency",
+                    "text":"P. - l. cons.",
                     "text-anchor":"begin",
                     "dominant-baseline":"central",
                     "y_offset":+18
                 },
                 {
-                    "text":"Prediction consistency",
+                    "text":"Pred. cons.",
                     "text-anchor":"begin",
                     "dominant-baseline":"central",
                     "y_offset":-22
                 },
             ];
+            /**
+             * "text":"DEG"
+             * "text":"Label consistency"
+             * "text":"Label - prediction consistency",
+             * "text":"Prediction - label consistency",
+             * "text":"Prediction consistency",
+             */
             let legend_configuration = {
                 "legend_x":legend_x,
                 "legend_y":legend_y,
@@ -1152,6 +1159,10 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         }else if(showMode === 3){
             let legend_x = 20;
             let legend_y = 40;
+            if(legendMode === 2){
+                legend_x = 30;
+                legend_y = 50;
+            }
             let legend_scale = 2;
             let legend_spd_info = [0, 0.7, 0.2, 0.1];
             let legend_transformed_distance = 0.5;
@@ -1164,7 +1175,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                     "y_offset":0
                 },
                 {
-                    "text":"Nearest training nodes \n label distribution",
+                    "text":"Near. train. \n label dist.",
                     "text-anchor":"begin",
                     "dominant-baseline":"central",
                     "y_offset":0
@@ -1176,6 +1187,10 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                     "y_offset":0
                 }
             ];
+            /**
+             * Nearest training nodes \n label distribution
+             * "text":"Closeness",
+             */
             let legend_configuration = {
                 "legend_x":legend_x,
                 "legend_y":legend_y,
@@ -1190,6 +1205,10 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         }else if(showMode === 4){
             let legend_x = 20;
             let legend_y = 30;
+            if(legendMode === 2){
+                legend_x = 30;
+                legend_y = 50;
+            }
             let legend_scale = 2;
             let legend_Color = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728","#fff"];
             let legend_Topkfs_nodes = [
@@ -1223,12 +1242,15 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                     "y_offset":0
                 },
                 {
-                    "text":"Top-5 similar feature \n training nodes label distribution",
+                    "text":"Top-k. feat. \n train. l. dist.",
                     "text-anchor":"begin",
                     "dominant-baseline":"central",
                     "y_offset":0
                 }
             ];
+            /**
+             * Top-k similar feature \n training nodes label distribution
+             */
             let legend_configuration = {
                 "legend_x":legend_x,
                 "legend_y":legend_y,
@@ -1241,6 +1263,49 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
             }
             this.renderLegendP1KFS(legend_svg, e.refresh_number, radius, legend_configuration);
         }
+    }
+    public handleTitleMouseMove(e:any, configuration:any, additional_info:any){
+        //console.log("handleTitleMouseMove",e);
+        var xy:any;
+        
+        //xy = d3.mouse(this);
+        xy = [d3.event.pageX, d3.event.pageY];
+        
+        let svgWidth = 100;
+        let svgHeight = 100;
+        let showMode = this.props.showMode;
+        if(showMode === 1){
+            svgWidth = 190;
+            svgHeight = 100;
+        }else if(showMode === 2){
+            svgWidth = 300;
+            svgHeight = 100;
+        }else if(showMode === 3){
+            svgWidth = 210;
+            svgHeight = 60+10;
+        }else if(showMode === 4){
+            svgWidth = 280;
+            svgHeight = 60;
+        }
+        var tooltip_proj = d3.select('#tooltip_proj')
+                            .style('opacity', 0.95)
+                            .style('top', (xy[1] - svgHeight) + 'px')
+                            .style('left', (xy[0] + 10) + 'px')
+        ;
+        tooltip_proj.selectAll("*").remove();
+        var tooltip_svg = tooltip_proj.append("svg")
+        .attr("width", svgWidth)
+        .attr("height", svgHeight);
+
+        var data_package = {
+            "configuration":configuration,
+            "tooltip_svg":tooltip_svg,
+            "additional_info":additional_info,
+            "e": e,
+            "showMode": showMode,
+            "legendMode": 1
+        }
+        this.renderLegend(data_package);
         
     }
     public handleGlyphMouseMove(e:any, configuration:any, additional_info:any){
@@ -1320,7 +1385,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         let legend_pie_y = 20;
         var top_svg = tooltip_svg;
         // ---------------------- Render Meta Text ---------------------- //
-        console.log(data_point);
+        //console.log(data_point);
         let meta_text = "";
         if(data_point["size"] === 1){
             meta_text = "The id of this node:"+data_point["raw_id_list"][0];
@@ -1494,7 +1559,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                     "y_offset":0
                 },
                 {
-                    "text":"Top-5 similar features \n training nodes label distribution"+kfs_desc_info,
+                    "text":"Top-k similar features \n training nodes label distribution"+kfs_desc_info,
                     "text-anchor":"begin",
                     "dominant-baseline":"central",
                     "y_offset":0
@@ -1512,7 +1577,96 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
             }
             this.renderLegendP1KFS(legend_svg, e.refresh_number, radius, legend_configuration);
         }
+
+
+        // ----- Change the style of hovered nodes and lines.  ------
+        let Data_id = data_point.Data_id;
+        let new_return_result:any[] = data_point.raw_id_list;
+        let new_highlight_node = [Data_id];
+        this.onHoveredNodeListChange(new_return_result, new_highlight_node, showMode);
+
         
+    }
+    public renderInViewLegend(){
+        let enableLegends = this.props.enableLegends;
+        let showMode = this.props.showMode;
+        let configuration = {
+            "radius":3.5,
+            "showlabel": false,
+            "width": this.props.width,
+            "height": this.props.height
+        }
+        let additional_info = this.additional_info;
+        var width = configuration["width"];
+        var height = configuration["height"]; // rect height
+        if(height<1){
+            height = 1
+        }
+        let legendWidth = 140;
+        let legendHeight = 100;
+        let legend_left_padding = 10;
+        //let showMode = this.props.showMode;
+        /*
+        if(showMode === 1){
+            legendWidth = 140;
+            legendHeight = 100;
+        }else if(showMode === 2){
+            legendWidth = 300;
+            legendHeight = 100;
+        }else if(showMode === 3){
+            legendWidth = 210;
+            legendHeight = 60+10+10;
+        }else if(showMode === 4){
+            legendWidth = 280;
+            legendHeight = 60+10;
+        }*/
+        
+        var legend_top_padding = 10;
+        var legend_height = legendHeight + legend_top_padding;
+        var legend_width = legendWidth + legend_left_padding;
+        legend_width = Math.min(width, legend_width);
+        d3.select("#ScatterPlot_sub_legend"+this.props.id).remove();
+        var legend_top_svg = d3.select("#TopSVGChart_ScatterPlot_Legend_"+this.props.id);
+
+        if(enableLegends){
+            console.log("Enable projection view legends rendering...")
+            
+
+            var legend_svg = legend_top_svg.append("g")
+            .attr("id","ScatterPlot_sub_legend"+this.props.id)
+            .attr("transform", function() {
+                return "translate(" + legend_left_padding + "," +  (height-legend_height) + ")";
+                })
+            .attr("width", legend_width - legend_left_padding)
+            .attr("height", legend_height-legend_top_padding);
+            legend_svg.append("rect")
+            .attr("x",0)
+            .attr("y",0)
+            .attr("width", legend_width - legend_left_padding)
+            .attr("height", legend_height-legend_top_padding)
+            .attr("fill","white")
+            .attr("stroke","#bbb")
+            .attr("stroke-width",2)
+            .attr("fill-opacity",0.9)
+            .attr("stroke-opacity",0.5)
+            ;
+
+            var data_package = {
+                "configuration":configuration,
+                "tooltip_svg":legend_svg,
+                "additional_info":additional_info,
+                "e": this,
+                "showMode": showMode,
+                "legendMode": 2
+            }
+            this.renderLegend(data_package);
+        }else{
+            console.log("Not Enable projection view legends...")
+
+        }
+
+
+            
     }
     /**
      * Render glyphs based on data points.
@@ -1524,7 +1678,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
      */
     public mappingGraph(point_array:any=null,additional_info:any=null, model:any=null) {
         let getSizeScale = this.getSizeScale;
-        console.log("point_array", point_array);
+
         //let getArc = this.getArc;
         //let getArcConf = this.getArcConf;
         if(point_array===null){
@@ -1543,7 +1697,9 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
             this.model = model;
         }
         let showMode = this.props.showMode;
+        let layoutMode = this.props.layoutMode;
         d3.select("#ScatterPlot_sub_"+this.props.id).remove();
+        d3.select("#ScatterPlot_Legend_sub_"+this.props.id).remove();
         if(point_array.length <= 0){
             return;
         }
@@ -1567,35 +1723,40 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         }
         var top_top_svg = d3.select("#TopSVGChart_ScatterPlot_"+this.props.id)
         var width = configuration["width"];
-        var height = configuration["height"];
-        
-        var top_svg = top_top_svg.append("g")
-                .attr("id","ScatterPlot_sub_"+this.props.id);
-            top_svg.append("rect")
-            .attr("x",0)
-            .attr("y",0)
-            .attr("width", width)
-            .attr("height", height)
-            .attr("fill","white")
-            .attr("stroke","#bbb")
-            .attr("stroke-width",2)
-            .attr("fill-opacity",0.1)
-            .attr("stroke-opacity",0.5)
-            ;
-            top_svg.append("text")
-                .attr("x",width/2)
-                .attr("y",-2)
-                .attr("text-anchor","middle")
-                .text(this.props.name)
-                .on("mousemove", handleTitleMouseMoveBridge)
-                .on("mouseout",this.handleTitleMouseOut);
+        var height = configuration["height"]; // rect height
+        if(height<1){
+            height = 1
+        }
         let handleTitleMouseMove = this.handleTitleMouseMove;
         function handleTitleMouseMoveBridge(this:any){
             //console.log("handleTitleMouseMoveBridge",this);
             handleTitleMouseMove(this,configuration, additional_info);
         }
-        
-        var svg = top_svg.append("g");
+        var top_svg = top_top_svg.append("g")
+        .attr("id","ScatterPlot_sub_"+this.props.id);
+        top_svg.append("rect")
+        .attr("x",0)
+        .attr("y",0)
+        .attr("width", width)
+        .attr("height", height)
+        .attr("fill","white")
+        .attr("stroke","#bbb")
+        .attr("stroke-width",2)
+        .attr("fill-opacity",0.1)
+        .attr("stroke-opacity",0.5)
+        ;
+        var legend_top_top_svg = d3.select("#TopSVGChart_ScatterPlot_Legend_"+this.props.id);
+        var legend_top_svg = legend_top_top_svg.append("g")
+        .attr("id","ScatterPlot_Legend_sub_"+this.props.id);
+        legend_top_svg.append("text")
+        .attr("x",width/2)
+        .attr("y",-4)
+        .attr("text-anchor","middle")
+        .text(this.props.name);
+        //.on("mousemove", handleTitleMouseMoveBridge)
+        //.on("mouseout",this.handleTitleMouseOut);
+        this.renderInViewLegend();
+        var svg = top_svg.append("g").attr("class","main_drawings");
             svg.attr("width", width)
                 .attr("height", height);
 
@@ -1691,17 +1852,37 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
             }
         }
         if(nodenum>=2){
+            // t-SNE settings:
+            //      alpha 0.1
+            //      alphaDecay 0.005
+            // UMAP
+            //      alpha 0.2
+            //      alphaDecay 0.005
+            let alpha = 0.1;
+            let alphaDecay = 0.005;
+            if(layoutMode===1){
+                alpha = 0.1;
+                alphaDecay = 0.005;
+            }else if(layoutMode === 2){
+                alpha = 0.2;
+                alphaDecay = 0.005;
+            }
             const forcetsne = d3.forceSimulation(point_array)
-        
-            .alphaDecay(0.005)
-            .alpha(0.1)
+            .alphaDecay(alphaDecay)
+            .alpha(alpha)
             .force('tsne', function (alpha:any) {
                 
                 // every time you call this, solution gets better
                 model.step();
 
                 // Y is an array of 2-D points that you can plot
-                let pos = model.getSolution();
+                let pos:any;
+                if(layoutMode === 1){
+                    pos = model.getSolution();
+                }else if(layoutMode === 2){
+                    pos = model.getEmbedding();
+                }
+                //
                 centerx.domain(d3.extent(pos.map((d:any) => d[0])));
                 centery.domain(d3.extent(pos.map((d:any) => d[1])));
 
@@ -1709,6 +1890,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                     d.x += alpha * (centerx(pos[i][0]) - d.x);
                     d.y += alpha * (centery(pos[i][1]) - d.y);
                 });
+                
             })
             .force('collide', d3.forceCollide().radius((d:any) => {
                 let s_scale = 1;
@@ -1814,11 +1996,46 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         var matrix:any = dataPackage["matrix"];
         var selectedNodeList:any = dataPackage["selectedNodeList"];
         var additional_info:any = this.props.dataPackage["additional_info"];
-       const model = new tsnejs.tSNE({
-            dim: 2,
-            perplexity: 30,
-        });
-        model.initDataDist(matrix);
+        let layoutMode = this.props.layoutMode;
+        let model;
+        if(layoutMode === 1){
+            model = new tsnejs.tSNE({
+                dim: 2,
+                perplexity: 30,
+            });
+            model.initDataDist(matrix);
+
+        }else if(layoutMode === 2){
+        
+            let getDistance = (x:any, y:any)=>{
+                let x_indices = x[0];
+                let y_indices = y[0];
+                return matrix[x_indices][y_indices];
+            }
+            model = new UMAP({
+                nComponents: 2,
+                distanceFn: getDistance,
+                nNeighbors: Math.min(15, matrix.length - 1)
+            });
+            
+            let fakedata = [];
+            for(let i = 0; i<matrix.length;i++){
+                fakedata.push([i]);
+            }
+            let nEpochs = 1;
+            if(fakedata.length>=2){
+                nEpochs = model.initializeFit(fakedata);
+    
+            }
+        }
+
+        /*for (let i = 0; i < nEpochs; i++) {
+            umap.step();
+        }
+        let embedding = umap.getEmbedding();
+        console.log("nEpochs", nEpochs);
+        console.log("umap embedding", embedding);*/
+        
         let initial_x = this.props.width / 2;
         let initial_y = this.props.height / 2;
         var point_array :any = [];
@@ -1830,6 +2047,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                 "y":initial_y
             });
         })
+        // console.log("pre point array", JSON.parse(JSON.stringify(point_array)))
         let updatefunc = this.mappingGraph;
         updatefunc(point_array,additional_info, model);
         
@@ -1844,8 +2062,11 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
     public render() {
         let {x,y,width,height } = this.props;
         return (
-         <g id={"TopSVGChart_ScatterPlot_"+this.props.id} transform={"translate("+x+","+y+")"} width={width} height={height}></g>
-        )
+         <g>
+             <g id={"TopSVGChart_ScatterPlot_"+this.props.id} transform={"translate("+x+","+y+")"} width={width} height={height}></g>
+                <g id={"TopSVGChart_ScatterPlot_Legend_"+this.props.id} transform={"translate("+x+","+y+")"} width={width} height={height}></g>
+                </g>
+         )
                 
            
     }

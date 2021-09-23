@@ -6,7 +6,7 @@ SPECIFIC_NODE_ID_LIST_CHANGE, SELECT_INSPECT_NODE_CHANGE,CLEAR_ID_INFO, PREV_GRA
 MATRIX_FILTERS_CHANGE,MATRIX_ROW_FILTERS_CHANGE, INSPECT_CATEGORY_LIST_CHANGE, PSJSON_CHANGE,PSSELECTEDNODES_CHANGE, EXTENDED_MODE_CHANGE, 
 PROJECTIONVIEWSELECTEDNODES_CHANGE,PROJECTIONVIEWTOTALNODENUM_CHANGE, 
 PSSETTINGMODAL_VISIBLE_CHANGE,PSDIMENSIONS_CHANGE, GRAPHVIEWSETTINGMODAL_VISIBLE_CHANGE, 
-FEATUREMATRIXVIEWSETTINGMODAL_VISIBLE_CHANGE, GRAPHVIEWSTATE_CHANGE} from '../constants';
+FEATUREMATRIXVIEWSETTINGMODAL_VISIBLE_CHANGE, GRAPHVIEWSTATE_CHANGE, KVALUE_CHANGE} from '../constants';
 import {StoreState} from '../types';
 import {getDefaultInspectCategoryOptions} from '../helper';
 const initial_state : StoreState = {
@@ -46,7 +46,8 @@ const initial_state : StoreState = {
     GraphViewState:{
       DisplayUnfocusedNodes:false,
       DisplayOverview:true
-    }
+    },
+    K_value:5
 }
 // 处理并返回 state 
 export default (state = initial_state, action:any): StoreState => {
@@ -213,6 +214,11 @@ export default (state = initial_state, action:any): StoreState => {
         return {
           ...state,
           GraphViewState: action.GraphViewState
+        }
+      case KVALUE_CHANGE:
+        return {
+          ...state,
+          K_value: action.K_value
         }
       default:
         return state

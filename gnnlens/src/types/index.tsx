@@ -30,5 +30,6 @@ export type StoreState = {
     ProjectionViewSettingsModal_visible:boolean,
     GraphViewSettingsModal_visible:boolean,
     FeatureMatrixViewSettingsModal_visible:boolean,
-    GraphViewState:any
+    GraphViewState:any,
+    K_value:any
 };

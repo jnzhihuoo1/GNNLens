@@ -1,6 +1,8 @@
 
 
 import HCluster from './HCluster';
+import "./ProjectionView.css";
+
 import {getLayoutMode, compareSelectedNodeIdList, getNodeStatisticStr, constructNeighborSet, getCoraNodeColor, getTrainColor} from '../../../helper';
 const d3 = require("d3");
 export default class ProjectionViewComputing{
@@ -15,8 +17,14 @@ export default class ProjectionViewComputing{
     public cluster_selectedNodeIdIndex:any[] = [];
     public cluster_highlightNodeIdDict: any = {};
     public detail_highlightNodeIdList: any = [];
+    public cluster_hoveredNodeIdDict: any = {};
+    public detail_hoveredNodeIdList: any = [];
+    public cluster_rawHoveredNodeIdList:any = [];
+    public detail_rawHoveredNodeIdList:any = [];
     public cluster_renderedLinesList: any[] = [];
     public detail_renderedLinesList: any[] = [];
+    public cluster_hoveredLinesList: any[] = [];
+    public detail_hoveredLinesList: any[] = [];
     public cluster_rawHighlightNodeIdList:any = [];
     public detail_rawHighlightNodeIdList:any = [];
     public aggregationMode : number = 1;
@@ -30,6 +38,10 @@ export default class ProjectionViewComputing{
         this.computeDistanceMatrix = this.computeDistanceMatrix.bind(this);
         this.updateHighlightNodeIdList = this.updateHighlightNodeIdList.bind(this);
     }
+    /**
+     * Aggregation Mode getter and setter.
+     * @param aggregationMode 
+     */
     public updateAggregationMode(aggregationMode:number){
         this.aggregationMode = aggregationMode;
     }
@@ -61,9 +73,11 @@ export default class ProjectionViewComputing{
             changeTotalNodeNum(totalNodeNum);
         }
     }
+
     public calculateHighlightNodeIdList(highlightNodeIdList:any, showMode:number = 1){
         if(this.aggregationMode === 1){
             //this.cluster_highlightNodeIdDict[""+showMode] = highlightNodeIdList;
+            // Initialize
             let all_data_package:any = {};
             let all_inverted_index:any = {};
             let local_cluster_highlightNodeIdDict : any ={};
@@ -72,7 +86,9 @@ export default class ProjectionViewComputing{
                 all_inverted_index[""+id]=all_data_package[""+id]["invertedIndex"];
                 local_cluster_highlightNodeIdDict[""+id] = [];
             }
+
             //let invertedIndex = all_data_package[""+showMode]["invertedIndex"];
+            // Get inner node index.
             let selectedNodeList = all_data_package[""+showMode]["selectedNodeList"];
             let selectedNodeIdList:any = [];
             for(let i = 0; i<highlightNodeIdList.length;i++){
@@ -80,9 +96,15 @@ export default class ProjectionViewComputing{
                 selectedNodeIdList = selectedNodeIdList.concat(id_list);
             }
             
+            // Use inverted index to get cluster id in individual projection view.
+            // Determine the lines.
             let renderedLinesCollection:any = {};
             for(let i = 0; i<selectedNodeIdList.length; i++){
                 let node_id = selectedNodeIdList[i];
+                // Line package
+                //      size: internal counter.
+                //      1,2,3,4: cluster id
+                //      line_name: key of line package
                 let line_package:any = {
                     "size":1
                 }
@@ -93,15 +115,19 @@ export default class ProjectionViewComputing{
                     line_name = line_name+cluster_id+"_";
                 }
                 line_package["name"] = line_name;
+                // Use line name as keys, if existed, enlarge the size.
                 if(Object.keys(renderedLinesCollection).indexOf(line_name)>=0){
                     renderedLinesCollection[line_name]["size"] = renderedLinesCollection[line_name]["size"] + 1;
                 }else{
                     renderedLinesCollection[line_name] = line_package;
                 }
             }
+            // Serialize lines collection.
             let renderedLinesList = Object.keys(renderedLinesCollection).map((d:any)=>{
                 return renderedLinesCollection[d];
             });
+
+            // Get highlight node id in individual view.
             for(let i = 0; i<renderedLinesList.length; i++){
                 for(let id=1;id<=4;id++){
                     let corr_id = renderedLinesList[i][""+id];
@@ -155,6 +181,11 @@ export default class ProjectionViewComputing{
             this.updateHighlightStatus(this.detail_highlightNodeIdList, id);
         }
     }
+    
+
+
+
+
     public updateHighlightNodeIdList(highlightNodeIdList:any, showMode:number=1, rawHighlightNodeIdList:any=[]){
         if(this.aggregationMode === 1){
             this.cluster_rawHighlightNodeIdList = rawHighlightNodeIdList;
@@ -167,6 +198,148 @@ export default class ProjectionViewComputing{
         this.calculateHighlightNodeIdList(highlightNodeIdList, showMode);
         this.updateFullHighlightStatus();
         
+    }
+    public updateHoveredNodeIdList(hoveredNodeIdList:any, showMode:number=1, rawHoveredNodeIdList:any=[]){
+        if(this.aggregationMode === 1){
+            this.cluster_rawHoveredNodeIdList = rawHoveredNodeIdList;
+            this.detail_rawHoveredNodeIdList = [];
+            this.detail_hoveredNodeIdList = [];
+        }else if(this.aggregationMode === 2){
+            this.detail_rawHoveredNodeIdList = rawHoveredNodeIdList;
+        }
+        this.calculateHoveredNodeIdList(hoveredNodeIdList, showMode);
+        this.updateFullHoveredStatus();
+        
+    }
+    public calculateHoveredNodeIdList(hoveredNodeIdList:any, showMode:number = 1){
+        if(this.aggregationMode === 1){
+            //this.cluster_highlightNodeIdDict[""+showMode] = highlightNodeIdList;
+            // Initialize
+            let all_data_package:any = {};
+            let all_inverted_index:any = {};
+            let local_cluster_highlightNodeIdDict : any ={};
+            for(let id = 1;id<=4;id++){
+                all_data_package[""+id]=this.getDataPackage(id,1);
+                all_inverted_index[""+id]=all_data_package[""+id]["invertedIndex"];
+                local_cluster_highlightNodeIdDict[""+id] = [];
+            }
+
+            //let invertedIndex = all_data_package[""+showMode]["invertedIndex"];
+            // Get inner node index.
+            let selectedNodeList = all_data_package[""+showMode]["selectedNodeList"];
+            let selectedNodeIdList:any = [];
+            for(let i = 0; i<hoveredNodeIdList.length;i++){
+                let id_list = selectedNodeList[hoveredNodeIdList[i]]["id_list"];
+                selectedNodeIdList = selectedNodeIdList.concat(id_list);
+            }
+            
+            // Use inverted index to get cluster id in individual projection view.
+            // Determine the lines.
+            let renderedLinesCollection:any = {};
+            for(let i = 0; i<selectedNodeIdList.length; i++){
+                let node_id = selectedNodeIdList[i];
+                // Line package
+                //      size: internal counter.
+                //      1,2,3,4: cluster id
+                //      line_name: key of line package
+                let line_package:any = {
+                    "size":1
+                }
+                let line_name:any = "LINE_";
+                for(let id=1; id<=4;id++){
+                    let cluster_id = all_inverted_index[""+id][node_id];
+                    line_package[""+id]=cluster_id;
+                    line_name = line_name+cluster_id+"_";
+                }
+                line_package["name"] = line_name;
+                // Use line name as keys, if existed, enlarge the size.
+                if(Object.keys(renderedLinesCollection).indexOf(line_name)>=0){
+                    renderedLinesCollection[line_name]["size"] = renderedLinesCollection[line_name]["size"] + 1;
+                }else{
+                    renderedLinesCollection[line_name] = line_package;
+                }
+            }
+            // Serialize lines collection.
+            let renderedLinesList = Object.keys(renderedLinesCollection).map((d:any)=>{
+                return renderedLinesCollection[d];
+            });
+
+            // Get highlight node id in individual view.
+            for(let i = 0; i<renderedLinesList.length; i++){
+                for(let id=1;id<=4;id++){
+                    let corr_id = renderedLinesList[i][""+id];
+                    if(local_cluster_highlightNodeIdDict[""+id].indexOf(corr_id)>=0){
+
+                    }else{
+                        local_cluster_highlightNodeIdDict[""+id].push(corr_id);
+                    }
+                }
+                
+            }
+            this.cluster_hoveredNodeIdDict = local_cluster_highlightNodeIdDict;
+            this.cluster_hoveredLinesList = renderedLinesList;
+            //console.log("cluster_hoveredLinesList", this.cluster_hoveredLinesList);
+        }else if(this.aggregationMode === 2){
+            this.detail_hoveredNodeIdList = hoveredNodeIdList;
+            let renderedLinesList:any [] = [];
+            for(let i = 0; i<hoveredNodeIdList.length; i++){
+                let linepackage:any = {
+                    "size":1
+                }
+                let line_name:any = "LINE_";
+                for(let id = 1;id<=4;id++){
+                    linepackage[""+id] = hoveredNodeIdList[i];
+                    line_name = line_name+hoveredNodeIdList[i]+"_";
+                }
+                linepackage["name"] = line_name;
+                renderedLinesList.push(linepackage);
+            }
+            this.detail_hoveredLinesList = renderedLinesList;
+        }
+        
+    }
+    public updateFullHoveredStatus(){
+        for(let id=1;id<=4;id++){
+            this.updateSingleHoveredStatus(id);
+        }
+    }
+    public updateSingleHoveredStatus(id:number){
+        if(this.aggregationMode === 1){
+            if(this.cluster_highlightNodeIdDict[""+id]){
+
+            }else{
+                this.cluster_highlightNodeIdDict[""+id]=[];
+            }
+            if(this.cluster_hoveredNodeIdDict[""+id]){
+
+            }else{
+                this.cluster_hoveredNodeIdDict[""+id]=[];
+            }
+            this.updateHoveredStatus(this.cluster_hoveredNodeIdDict[""+id], this.cluster_highlightNodeIdDict[""+id], id);
+            
+        }else if(this.aggregationMode === 2){
+            this.updateHoveredStatus(this.detail_hoveredNodeIdList, this.detail_highlightNodeIdList, id);
+        }
+    }
+    public updateHoveredStatus(hoveredNodeIdList:any, highlightNodeIdList:any, id:number){
+        console.log("updateHoveredStatus", hoveredNodeIdList, id);
+        var top_svg = d3.select("#"+"ScatterPlot_sub_"+id);
+        var svg = top_svg.select("g.main_drawings");
+        var nodes = svg.selectAll("g.nodes")
+        var hoveredNodes = nodes.filter((d:any)=>{
+            if(hoveredNodeIdList.indexOf(d.data.Data_id)>=0){
+                //if(highlightNodeIdList.indexOf(d.data.Data_id)>=0){
+                d.hovered = true;
+                return true;
+                //}
+            }
+            d.hovered = false;
+            return false;
+        })
+        nodes
+            .classed("hovered", false);
+        hoveredNodes
+            .classed("hovered", true);
     }
     public initialize(filters:any, PCPJson:any){
         this.reset();
@@ -199,6 +372,14 @@ export default class ProjectionViewComputing{
         this.detail_renderedLinesList = [];
         this.cluster_rawHighlightNodeIdList = [];
         this.detail_rawHighlightNodeIdList = [];
+
+        this.cluster_hoveredNodeIdDict = {};
+        this.detail_hoveredNodeIdList = [];
+        this.cluster_rawHoveredNodeIdList = [];
+        this.detail_rawHoveredNodeIdList = [];
+        this.cluster_hoveredLinesList = [];
+        this.detail_hoveredLinesList = [];
+
         this.aggregationMode = 1;
     }
     public reconstructDataPackage(datapackage:any){
@@ -560,6 +741,9 @@ export default class ProjectionViewComputing{
 
 
     public renderLines(enableLines:any,  width:number, height:number){
+        /**
+         * It will be automatically updated the status of lines according to the data in class.
+         */
         if(enableLines){
             //let highlightNodeIdList = this.highlightNodeIdList;
             //let highlightNodeIdList = this.state.highlightNodeIdList;
@@ -570,13 +754,18 @@ export default class ProjectionViewComputing{
             for(let id = 1; id<=4; id++){
                 let highlightNodeIdList:any; 
                 if(this.aggregationMode === 1){
+                    if(this.cluster_highlightNodeIdDict[""+id]){
+
+                    }else{
+                        this.cluster_highlightNodeIdDict[""+id] = [];
+                    }
                     highlightNodeIdList = this.cluster_highlightNodeIdDict[""+id];
                 }else{
                     highlightNodeIdList = this.detail_highlightNodeIdList;
                 }
                 
                 var top_svg = d3.select("#"+"ScatterPlot_sub_"+id);
-                var svg = top_svg.select("g");
+                var svg = top_svg.select("g.main_drawings");
                 var nodes = svg.selectAll("g.nodes");
                 var point_array_data:any = {};
                 nodes.data().forEach((d:any)=>{
@@ -593,7 +782,6 @@ export default class ProjectionViewComputing{
                     "point_array":point_array_data
                 });
             }
-            
             let marginLeft = 20, marginRight = 20;
             let marginTop = 20, marginBottom = 62;
             let projectionHeight = height - marginBottom - marginTop;
@@ -601,14 +789,27 @@ export default class ProjectionViewComputing{
             let projectionWidth = (width - marginLeft - marginRight) / 4  - gap;
             let successflag = true;
             let renderedLinesList:any[] = [];
+            let hoveredLinesList:any[] = [];
             if(this.aggregationMode === 1){
                 renderedLinesList = this.cluster_renderedLinesList;
+                hoveredLinesList = this.cluster_hoveredLinesList;
             }else if(this.aggregationMode === 2){
                 renderedLinesList = this.detail_renderedLinesList;
+                hoveredLinesList = this.detail_hoveredLinesList;
             }
+            
+            hoveredLinesList = hoveredLinesList.map((d:any)=>{
+                return d["name"];
+            })
             for(let i = 0; i<renderedLinesList.length; i++){
                 //let node_id = highlightNodeIdList[i];
                 let line_package = renderedLinesList[i];
+                let line_name = line_package["name"];
+                let hovered: boolean = false;
+                if(hoveredLinesList.indexOf(line_name)>=0){
+                    hovered = true;
+                }
+                line_package["hovered"] = hovered;
                 let coords = [];
                 for(let j = 0 ; j<all_data.length; j++){
                     let id = j+1;
@@ -665,7 +866,13 @@ export default class ProjectionViewComputing{
                 lines.exit().remove();
                 line_enter_update.attr("d", constructPointStr)
                 .style("fill","none")
-                .style("stroke","#999")
+                .style("stroke",(d:any)=>{
+                    if(d.line_package.hovered === true){
+                        return "#000";
+                    }else{
+                        return "#999";
+                    }
+                })
                 .style("stroke-width",(d:any)=>{
                     return 1.5*Math.sqrt(d.line_package.size)
                 })
@@ -696,7 +903,7 @@ export default class ProjectionViewComputing{
          */
         //let highlightNodeIdList = this.props.highlightNodeIdList;
         var top_svg = d3.select("#"+"ScatterPlot_sub_"+id);
-        var svg = top_svg.select("g");
+        var svg = top_svg.select("g.main_drawings");
         var nodes = svg.selectAll("g.nodes")
         var selectedNodes = nodes.filter((d:any)=>{
             if(highlightNodeIdList.indexOf(d.data.Data_id)>=0){
