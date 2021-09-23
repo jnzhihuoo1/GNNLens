@@ -8,7 +8,7 @@ import BrushBarChartContainer from '../../../container/BrushBarChartContainer';
 //import IndentedTreeContainer from '../../../container/IndentedTreeContainer';
 import IndentedListContainer from '../../../container/IndentedListContainer';
 import { Select, Switch, Button } from 'antd';
-import {getCoraNodeColor, getLayoutMode, constructPathDict,getTrainColor} from '../../../helper';
+import {getCoraNodeColor, getLayoutMode, constructPathDict,getTrainColor,cropAnchorsList} from '../../../helper';
 import VerticalSliderContainer from "../../../container/VerticalSliderContainer";
 import { AnyCnameRecord } from "dns";
 import { select } from "d3";
@@ -47,7 +47,8 @@ export interface IProps {
     specificNodeIdList: any[],
     select_inspect_node:number,
     showSource : boolean,
-    extendedMode: any
+    extendedMode: any,
+    K_value:any
 
 }
 export interface IState {
@@ -222,8 +223,8 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
             "level":0,
             "dist":2
         });
-        
-        let feature_sim_set = KFS[select_node]["details"].forEach((d:any)=>{
+        let cropAnchors = cropAnchorsList(KFS[select_node]["details"], this.props.K_value);
+        let feature_sim_set = cropAnchors.forEach((d:any)=>{
             let anchor_id = d.anchor_id;
             alreadyVisitedNodesInfo.push({
                 "id":anchor_id,
@@ -487,8 +488,7 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
             common = graph_object.common;
             individual = graph_object.individual;
             graph_name = common.name+"_"+common.dataset_id+"_"+common.data_type_id+"_SELECTED_"+selectedStr+"_SELECTED_END_"
-            +axis_select+"_"+distance_select+"_"+dataSource_select+"_"+color_encode+"_"+select_inspect_node+"_"+enableSorting+"_"+width+"_"+height
-            ;
+            +axis_select+"_"+distance_select+"_"+dataSource_select+"_"+color_encode+"_"+select_inspect_node+"_"+enableSorting+"_"+width+"_"+height+"_"+this.props.K_value;
             if(showSource){
                 graph_name = graph_name+"_"+extendedMode;
             }else{

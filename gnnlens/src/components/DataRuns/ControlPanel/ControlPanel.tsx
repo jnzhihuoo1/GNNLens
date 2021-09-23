@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {Tabs, Table, Row,  Radio} from 'antd';
+import {Tabs, Table, Row,  Radio, Col, Slider, InputNumber} from 'antd';
 import DataSelectorContainer from '../../../container/DataSelectorContainer';
 //const TabPane = Tabs.TabPane
 //const CheckboxGroup = Checkbox.Group;
@@ -10,12 +10,16 @@ const defaultCheckedList = ['Train', 'Valid', 'Test', 'Others'];
 export interface ControlPanelProps {
     InspectCategoryList : any,
     onChangeInspectCategoryList : any,
-    dataset_id: number | null
+    dataset_id: number | null,
+    K_value:any,
+    changeK_value:any
 }
 
 export interface ControlPanelState {}
 
 export default class ControlPanel extends React.Component<ControlPanelProps, ControlPanelState> {
+    public min_K_value = 1;
+    public max_K_value = 5;
     constructor(props: ControlPanelProps) {
         super(props);
         this.onChangeRadioCategory = this.onChangeRadioCategory.bind(this);
@@ -60,8 +64,20 @@ export default class ControlPanel extends React.Component<ControlPanelProps, Con
         }
         this.props.onChangeInspectCategoryList(options);
     }
+    handleKvalueChange = (value:any) =>{
+        if(value>=this.min_K_value && value <= this.max_K_value){
+            this.props.changeK_value(value);
+        }else if(value < this.min_K_value){
+            this.props.changeK_value(this.min_K_value);
+        }else if(value > this.max_K_value){
+            this.props.changeK_value(this.max_K_value);
+        }
+    }
     public render() {
         let radio_value = this.transformCategoryList(this.props.InspectCategoryList);
+        let min_K_value = this.min_K_value;
+        let max_K_value = this.max_K_value;
+        let {K_value} = this.props;
         return (
             <div>
             <div className="ViewTitle">Control Panel</div>
@@ -82,6 +98,30 @@ export default class ControlPanel extends React.Component<ControlPanelProps, Con
                         </RadioGroup>
                         
                     </Row>:(<div />)
+                    }
+                    {(this.props.dataset_id && this.props.dataset_id>=0)?<Row>
+                        <Row>K value:</Row>
+                    
+                <Row>
+                    <Col span={18}>
+                    <Slider
+                        min={min_K_value}
+                        max={max_K_value}
+                        onChange={this.handleKvalueChange}
+                        value={typeof K_value === 'number' ? K_value : 0}
+                    />
+                    </Col>
+                    <Col span={4}>
+                    <InputNumber
+                        min={min_K_value}
+                        max={max_K_value}
+                        style={{ margin: '0 16px' }}
+                        value={K_value}
+                        onChange={this.handleKvalueChange}
+                    />
+                    </Col>
+                </Row>
+                </Row>:(<div />)
                     }
                     
             </div>

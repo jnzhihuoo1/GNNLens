@@ -329,7 +329,23 @@ function compareSelectedNodeIdList(list_a:any, list_b:any){
         return false;
     }
 }
-
+function cropAnchorsList(anchors_list:any, K_value:any){
+    anchors_list.sort((a:any,b:any)=>{
+        if(a.anchor_similarity>b.anchor_similarity){
+            return -1;
+        }else{
+            return 1;
+        }
+    })
+    if(K_value<1){
+        K_value = 1;
+    }
+    if(K_value > anchors_list.length){
+        K_value = anchors_list.length;
+    }
+    anchors_list = anchors_list.slice(0,K_value);
+    return anchors_list;
+}
 function getLayoutMode(){
     // 1 ---> Graph View In Center
     // 2 ---> Parallel Coordinates in Row
@@ -340,4 +356,5 @@ function getLayoutMode(){
 export { RED,YELLOW, EChartsColor, getInfectionNodeColor,
      getInfectionEdgeColor, getCoraNodeColor,getCoraTextColor,
      constructNeighborSet, getLayoutMode, constructPathDict,getTrainColor,
-     getInspectCategoryOptions, getDefaultInspectCategoryOptions, compareSelectedNodeIdList,getNodeStatisticStr }
+     getInspectCategoryOptions, getDefaultInspectCategoryOptions, 
+     compareSelectedNodeIdList, getNodeStatisticStr, cropAnchorsList }

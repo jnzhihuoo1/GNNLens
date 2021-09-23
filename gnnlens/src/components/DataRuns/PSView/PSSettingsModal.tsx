@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Modal, Select, Button } from 'antd';
+import { Modal, Select, Button, Row, Col, Slider, InputNumber } from 'antd';
 import { PSDIMENSIONS_CHANGE } from "../../../constants";
 export interface IProps {
     PSSettingModal_visible: boolean,
@@ -7,11 +7,15 @@ export interface IProps {
     changePSDimensions:any,
     PSDimensions:any,
     CandidatePSDimensions:any,
-    DefaultPSDimensions:any
+    DefaultPSDimensions:any,
+    K_value:any,
+    changeK_value:any
 }
 export interface IState {
 }
 export default class PSSettingsModal extends React.Component<IProps, IState>{
+    public min_K_value = 1;
+    public max_K_value = 5;
     constructor(props:IProps) {
         super(props);
 
@@ -50,9 +54,21 @@ export default class PSSettingsModal extends React.Component<IProps, IState>{
         }
         //console.log("selected", value);
     }
+    handleKvalueChange = (value:any) =>{
+        if(value>=this.min_K_value && value <= this.max_K_value){
+            this.props.changeK_value(value);
+        }else if(value < this.min_K_value){
+            this.props.changeK_value(this.min_K_value);
+        }else if(value > this.max_K_value){
+            this.props.changeK_value(this.max_K_value);
+        }
+    }
     public render() {
         const { Option } = Select;
         const children = [];
+        let min_K_value = this.min_K_value;
+        let max_K_value = this.max_K_value;
+        let {K_value} = this.props;
         let CandidatePSDimensions = this.props.CandidatePSDimensions;
         for (let i = 0; i < CandidatePSDimensions.length; i++) {
             children.push(<Option key={CandidatePSDimensions[i]}>{CandidatePSDimensions[i]}</Option>);
@@ -84,6 +100,26 @@ export default class PSSettingsModal extends React.Component<IProps, IState>{
                 >
                     {children}
                 </Select>
+                {/*K value:
+                <Row>
+                    <Col span={18}>
+                    <Slider
+                        min={min_K_value}
+                        max={max_K_value}
+                        onChange={this.handleKvalueChange}
+                        value={typeof K_value === 'number' ? K_value : 0}
+                    />
+                    </Col>
+                    <Col span={4}>
+                    <InputNumber
+                        min={min_K_value}
+                        max={max_K_value}
+                        style={{ margin: '0 16px' }}
+                        value={K_value}
+                        onChange={this.handleKvalueChange}
+                    />
+                    </Col>
+                </Row>*/}
         </Modal>)
     }
 }

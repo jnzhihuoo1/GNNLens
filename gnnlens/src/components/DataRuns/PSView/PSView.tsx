@@ -3,7 +3,8 @@ import * as React from "react";
 import ParallelSetsContainer from '../../../container/ParallelSetsContainer';
 import PSViewNodeStatisticContainer from '../../../container/PSViewNodeStatisticContainer';
 import { Row , Button} from 'antd';
-import {constructNeighborSet,getLayoutMode,getCoraNodeColor,getTrainColor, compareSelectedNodeIdList} from '../../../helper';
+import {constructNeighborSet,getLayoutMode,getCoraNodeColor,getTrainColor, 
+    compareSelectedNodeIdList, cropAnchorsList} from '../../../helper';
 import PSSettingsModalContainer from "../../../container/PSSettingsModalContainer";
 import { getConfigFileParsingDiagnostics } from "typescript";
 import { SettingOutlined } from '@ant-design/icons';
@@ -24,7 +25,8 @@ export interface IProps {
     checkedList:any[],
     changePSJson:any,
     changePSSettingsModal_visible:any,
-    changePSDimensions:any
+    changePSDimensions:any,
+    K_value:any
 }
 export interface IState {
 
@@ -227,7 +229,7 @@ export default class PSView extends React.Component<IProps, IState>{
         if(layout_mode === 3){
             common = graph_object.common;
             individual = graph_object.individual;
-            graph_name = common.name+"_"+common.dataset_id+"_"+(show_mode)+"_"+common.data_type_id+"_CheckedList_"+CheckedList_str+"_CheckedList_End_"+width+"_"+height;
+            graph_name = common.name+"_"+common.dataset_id+"_"+(show_mode)+"_"+common.data_type_id+"_CheckedList_"+CheckedList_str+"_CheckedList_End_"+width+"_"+height+"_"+this.props.K_value;
             graph_out = individual.GCN.graph_out;
         }else{
             graph_name = graph_object.name+"_"+graph_object.dataset_id+"_"+(graph_object.model)
@@ -634,6 +636,16 @@ export default class PSView extends React.Component<IProps, IState>{
                 return max_index_list[0];
             }
         }
+
+        function getLabelDistribution2(node_list:any, num_classes:any){
+            let node_info = new Array(num_classes).fill(0);
+            //let mfs_set = feature_similarity_list[""+index].feature_sim_set;
+            for(let j = 0; j<node_list.length; j++){
+                let label = node_list[j].anchor_label;
+                node_info[label] = node_info[label] + 1;
+            }
+            return normalized(node_info);
+        }
         if(data_type === 2){
             let node_num = graph_target.node_features.length;
             let num_classes = common.graph_additional_info.num_class;
@@ -644,6 +656,7 @@ export default class PSView extends React.Component<IProps, IState>{
             //console.log("shortest_path_distance, selected_mask, node_num, NeighborSet, mask.train", selected_mask, node_num, NeighborSet, mask.train);
             let enableSPD = true;
             let enableKFS = true;
+            let enableK_settings = true; // enable setting k values.
             let shortest_path_distance_package:any, feature_similarity_list:any;
             if(enableSPD){
                 shortest_path_distance_package = common.graph_additional_info.SPD;
@@ -792,6 +805,10 @@ export default class PSView extends React.Component<IProps, IState>{
                 if(enableKFS){
                     node_json["Topkfs_node_info"] = feature_similarity_list[index]["train_nodes"];
                     node_json["Topkfs_nodes"] = feature_similarity_list[index]["details"];
+                    if(enableK_settings){
+                        node_json["Topkfs_nodes"] = cropAnchorsList(node_json["Topkfs_nodes"],this.props.K_value);
+                        node_json["Topkfs_node_info"] = getLabelDistribution2(node_json["Topkfs_nodes"], num_classes);
+                    }
                     node_json["Topkfs_nodes"] = node_json["Topkfs_nodes"].sort((a:any,b:any)=>{
                         if(a.anchor_label<b.anchor_label){
                             return -1;

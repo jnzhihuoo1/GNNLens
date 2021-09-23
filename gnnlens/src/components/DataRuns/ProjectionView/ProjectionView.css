@@ -44,10 +44,15 @@
     opacity: 0.9
 }
 */
- .proj_outer_circle {
+.proj_outer_circle {
     stroke: #bbb;
     stroke-width: 1.5px;
 }
+.gnn_outer_rects{
+    stroke: #bbb;
+    stroke-width: 1px;
+}
+
 /*
 .lasso_not_possible .proj_outer_circle {
     stroke: #bbb;
@@ -77,4 +82,15 @@
     /*stroke: steelblue;
     stroke-width: 6px;*/
     /*transform: scale(2);*/
+}
+ .hovered .proj_outer_circle{
+    stroke: steelblue;
+    stroke-width: 3px;
+    /*stroke: steelblue;
+    stroke-width: 3px;*/
+    /*transform: scale(2);*/
+}
+ .hovered .gnn_outer_rects{
+    stroke: steelblue;
+    stroke-width: 3px;
 }
