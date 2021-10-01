@@ -442,9 +442,18 @@ export default class ProjectionViewComputing{
         let getSquareDistance = this.getSquareDistance;
         let transformCNtoList = this.transformCNtoList;
         let dis:number = 0;
-        if(showMode=== 1){
-            let columns = ["Ground_Truth_Label", "GCN_Prediction_Label", "GCN(w/o_adj)_Prediction_Label", "GCN(w/o_features)_Prediction_Label"];
+        let pie_name = additional_info["pie_name"];
+        let key_model_name = pie_name[0];
+        let model_pred_label = []
+        for(let i = 0; i< pie_name.length; i++){
+            model_pred_label.push(pie_name[i] + "_Prediction_Label")
+        }
         
+        if(showMode=== 1){
+            let columns = ["Ground_Truth_Label"];
+            for(let i = 0; i<model_pred_label.length; i++){
+                columns.push(model_pred_label[i]);
+            }
             for(let i =0 ;i<columns.length; i++){
                 if(selected_node_info_a[columns[i]]===selected_node_info_b[columns[i]]){
 
@@ -453,8 +462,8 @@ export default class ProjectionViewComputing{
                 }
             }
 
-            let conf_a = selected_node_info_a.GCN_Confidence;
-            let conf_b = selected_node_info_b.GCN_Confidence;
+            let conf_a = selected_node_info_a[key_model_name+"_Confidence"];
+            let conf_b = selected_node_info_b[key_model_name+"_Confidence"];
             dis = dis + Math.pow(Math.abs(conf_a-conf_b), 2);
 
         }else if(showMode === 2){
@@ -477,7 +486,7 @@ export default class ProjectionViewComputing{
             , transformCNtoList(selected_node_info_b.CN_consistency));
             dis = dis + cn_diff;
         }else if(showMode === 3){
-            let columns = ["GCN_Prediction_Label"];
+            let columns = [model_pred_label[0]];
         
             for(let i =0 ;i<columns.length; i++){
                 if(selected_node_info_a[columns[i]]===selected_node_info_b[columns[i]]){
@@ -509,7 +518,7 @@ export default class ProjectionViewComputing{
 
 
         }else if(showMode === 4){
-            let columns = ["GCN_Prediction_Label"];
+            let columns = [model_pred_label[0]];
         
             for(let i =0 ;i<columns.length; i++){
                 if(selected_node_info_a[columns[i]]===selected_node_info_b[columns[i]]){
@@ -626,7 +635,7 @@ export default class ProjectionViewComputing{
         }
         
     }
-    public transformClusterRoot(root:any, selectedNodeList:any, showMode:any){
+    public transformClusterRoot(root:any, selectedNodeList:any, showMode:any, additional_info:any){
         let filter_selectedNodeList:any[] = [];
         let id_list = root.id_list;
         let raw_id_list:any[] = [];
@@ -636,18 +645,25 @@ export default class ProjectionViewComputing{
         for(let i = 0; i<id_list.length; i++){
             raw_id_list.push(filter_selectedNodeList[i]["Data_id"]);
         }
+        let pie_name = additional_info["pie_name"];
+        let key_model_name = pie_name[0];
         if(showMode === 1){
-            let columns = ["Ground_Truth_Label", "GCN_Prediction_Label", "GCN(w/o_adj)_Prediction_Label", "GCN(w/o_features)_Prediction_Label", "GCN_Confidence"];
-            let vector_type = ["categorical", "categorical", "categorical", "categorical", "continuous"];
+            let columns = ["Ground_Truth_Label"];
+            let vector_type = ["categorical"];
+            for(let i = 0 ; i< pie_name.length; i++){
+                columns.push(pie_name[i] + "_Prediction_Label");
+                vector_type.push("categorical");
+            }
+            columns.push(pie_name[0] + "_Confidence")
+            vector_type.push("continuous");
             
             let data_package:any = {};
             data_package = this.aggregateSelectedNodeList(filter_selectedNodeList, columns, vector_type);
-            let color:any = [getCoraNodeColor(data_package["Ground_Truth_Label"], 2), 
-                getCoraNodeColor(data_package["GCN_Prediction_Label"],3),
-                getCoraNodeColor(data_package["GCN(w/o_adj)_Prediction_Label"],3),
-                getCoraNodeColor(data_package["GCN(w/o_features)_Prediction_Label"],3),
-                "#fff"
-            ]; 
+            let color:any = [getCoraNodeColor(data_package["Ground_Truth_Label"], 2)]; 
+            for(let i = 0; i<pie_name.length; i++){
+                color.push(getCoraNodeColor(data_package[pie_name[i]+"_Prediction_Label"],3))
+            }
+            color.push("#fff");
             data_package["Color"]=color;
             data_package["id_list"] = id_list;
             data_package["raw_id_list"] = raw_id_list;
@@ -673,12 +689,12 @@ export default class ProjectionViewComputing{
             //this.vector_type = ["categorical", "continuous", "continuous", "continuous", "continuous", "continuous"];
         }else if(showMode === 3){
             // prediction label, SPD INFO
-            let columns = ["GCN_Prediction_Label", "Spd_node_info","Transformed_Distance"];
+            let columns = [key_model_name+"_Prediction_Label", "Spd_node_info","Transformed_Distance"];
             let vector_type = ["categorical",  "vector_continuous","continuous"];
             let data_package:any = {};
             data_package = this.aggregateSelectedNodeList(filter_selectedNodeList, columns, vector_type);
             let color:any = ["#fff", 
-                getCoraNodeColor(data_package["GCN_Prediction_Label"], 3),
+                getCoraNodeColor(data_package[key_model_name+"_Prediction_Label"], 3),
                 "#fff",
                 "#fff",
                 "#fff"
@@ -691,7 +707,7 @@ export default class ProjectionViewComputing{
         }else if(showMode === 4){
             // predication label, topkfs
             //this.vector_type = ["categorical"];
-            let columns = ["GCN_Prediction_Label","Topkfs_node_info"];
+            let columns = [key_model_name + "_Prediction_Label","Topkfs_node_info"];
             let vector_type = ["categorical", "vector_continuous"];
             let data_package:any = {};
             data_package = this.aggregateSelectedNodeList(filter_selectedNodeList, columns, vector_type);
@@ -712,7 +728,7 @@ export default class ProjectionViewComputing{
 
             }
             let color:any = ["#fff", 
-                getCoraNodeColor(data_package["GCN_Prediction_Label"], 3),
+                getCoraNodeColor(data_package[key_model_name+"_Prediction_Label"], 3),
                 "#fff",
                 "#fff",
                 "#fff"
@@ -959,7 +975,7 @@ export default class ProjectionViewComputing{
             console.log("not initialized");
             return {}
         }*/
-        let getDistance = this.getDistance;
+        //let getDistance = this.getDistance;
         let transformCNtoList = this.transformCNtoList;
         //let filters = this.filters;
         //let PCPJson = this.PCPJson;
@@ -1000,9 +1016,13 @@ export default class ProjectionViewComputing{
         additional_info["max_degree"] = max_degree;
         additional_info["pie_name"] = pie_name;
         matrix = this.computeDistanceMatrix(selectedNodeList, additional_info, showMode);
-        
+        let key_model_name = pie_name[0];
         if(showMode === 1){
-            let columns = ["Ground_Truth_Label", "GCN_Prediction_Label", "GCN(w/o_adj)_Prediction_Label", "GCN(w/o_features)_Prediction_Label", "GCN_Confidence"];
+            let columns = ["Ground_Truth_Label"];
+            for(let i = 0; i<pie_name.length; i++){
+                columns.push(pie_name[i]+"_Prediction_Label");
+            }
+            columns.push(key_model_name+"_Confidence");
             for(let i = 0; i<selectedNodeList.length; i++){
                 let vector = [];
                 let selectednode = selectedNodeList[i];
@@ -1022,7 +1042,7 @@ export default class ProjectionViewComputing{
                 vectors.push(vector);
             }
         }else if(showMode === 3){
-            let columns = ["GCN_Prediction_Label"];
+            let columns = [key_model_name + "_Prediction_Label"];
             for(let i = 0; i<selectedNodeList.length; i++){
                 let vector:any = [];
                 let selectednode = selectedNodeList[i];
@@ -1032,7 +1052,7 @@ export default class ProjectionViewComputing{
                 vectors.push(vector);
             }
         }else if(showMode === 4){
-            let columns = ["GCN_Prediction_Label"];
+            let columns = [key_model_name + "_Prediction_Label"];
             for(let i = 0; i<selectedNodeList.length; i++){
                 let vector:any = [];
                 let selectednode = selectedNodeList[i];
@@ -1050,7 +1070,7 @@ export default class ProjectionViewComputing{
         let root = hcluster.cluster(vectors,limit_distance);
         let FilterData:any = [];
         for(let i = 0; i<root.length; i++){
-            let data_package = this.transformClusterRoot(root[i], selectedNodeList, showMode);
+            let data_package = this.transformClusterRoot(root[i], selectedNodeList, showMode, additional_info);
             data_package["Data_id"] = i;
             FilterData.push(data_package);
         }

@@ -6,7 +6,8 @@ SPECIFIC_NODE_ID_LIST_CHANGE, SELECT_INSPECT_NODE_CHANGE,CLEAR_ID_INFO, PREV_GRA
 MATRIX_FILTERS_CHANGE,MATRIX_ROW_FILTERS_CHANGE, INSPECT_CATEGORY_LIST_CHANGE, PSJSON_CHANGE,PSSELECTEDNODES_CHANGE, EXTENDED_MODE_CHANGE, 
 PROJECTIONVIEWSELECTEDNODES_CHANGE,PROJECTIONVIEWTOTALNODENUM_CHANGE, 
 PSSETTINGMODAL_VISIBLE_CHANGE,PSDIMENSIONS_CHANGE, GRAPHVIEWSETTINGMODAL_VISIBLE_CHANGE, 
-FEATUREMATRIXVIEWSETTINGMODAL_VISIBLE_CHANGE, GRAPHVIEWSTATE_CHANGE, KVALUE_CHANGE} from '../constants';
+FEATUREMATRIXVIEWSETTINGMODAL_VISIBLE_CHANGE, GRAPHVIEWSTATE_CHANGE, 
+KVALUE_CHANGE, SELECTEDMODELS_CHANGE, MODELSLIST_CHANGE, CHANGE_LOADING_DATASET} from '../constants';
 import {StoreState} from '../types';
 import {getDefaultInspectCategoryOptions} from '../helper';
 const initial_state : StoreState = {
@@ -14,6 +15,8 @@ const initial_state : StoreState = {
     graph : null,
     dataset_id : null,
     explain_id:null,
+    selected_models_list:[],
+    models_list:[],
     refreshnumber: 0,
     showSource: false,
     modelList : [],
@@ -47,7 +50,8 @@ const initial_state : StoreState = {
       DisplayUnfocusedNodes:false,
       DisplayOverview:true
     },
-    K_value:5
+    K_value:5,
+    loading_dataset:false
 }
 // 处理并返回 state 
 export default (state = initial_state, action:any): StoreState => {
@@ -219,6 +223,21 @@ export default (state = initial_state, action:any): StoreState => {
         return {
           ...state,
           K_value: action.K_value
+        }
+      case SELECTEDMODELS_CHANGE:
+        return {
+          ...state,
+          selected_models_list: action.selected_models_list
+        }
+      case MODELSLIST_CHANGE:
+        return {
+          ...state,
+          models_list: action.models_list
+        }
+      case CHANGE_LOADING_DATASET:
+        return {
+          ...state,
+          loading_dataset: action.loading_dataset
         }
       default:
         return state

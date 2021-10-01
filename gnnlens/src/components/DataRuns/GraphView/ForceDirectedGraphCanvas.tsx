@@ -2,6 +2,7 @@
 import './ForceDirectedGraphCanvas.css'
 import * as React from "react";
 import { scaleBand } from 'd3';
+import {drawRectStroke, drawRect, drawNodeGlyph, drawLine} from './CanvasDrawing';
 const d3 = require("d3");
 const legend_line_style = {
     "stroke":"#bbb",
@@ -51,6 +52,7 @@ export default class ForceDirectedGraphCanvas extends React.Component<IProps, IS
         var colorLegend = legend_configuration["colorLegend"];
         var pieLegend = legend_configuration["pieLegend"];
         var pieName = pieLegend.pie_name;
+        var models_length = pieName.length;
         var inner_radius = radius - radius_gap;
         // ---------------------- Render Legend -------------------------- //
         let legend_pie_x = 10;
@@ -65,26 +67,23 @@ export default class ForceDirectedGraphCanvas extends React.Component<IProps, IS
             .attr("height", 100)
             .attr("transform","translate("+legend_pie_x+","+legend_pie_y+")")
 
-        
-            var arc_data = [{
-                "index":0,
-                "value":1/3
-            }, {
-                "index":1,
-                "value":1/3
-            }, {
-                "index":2,
-                "value":1/3
-            }];
-            var ori_arcs = d3.pie()
-            .startAngle((-60/180) * Math.PI)
-            .endAngle((2-60/180) * Math.PI)
-            .value(function(a:any){
-                return a.value;
+        var arc_data:any = [];
+        for(let i = 0; i<models_length; i++){
+            arc_data.push({
+                "index":i,
+                "value":1/models_length
             })
-            .sort(function(a:any, b:any) {
-                return a.index<b.index;
-            });
+        }
+        let startAngle = -180 / models_length;
+        var ori_arcs = d3.pie()
+        .startAngle((startAngle/180) * Math.PI)
+        .endAngle((2+startAngle/180) * Math.PI)
+        .value(function(a:any){
+            return a.value;
+        })
+        .sort(function(a:any, b:any) {
+            return a.index<b.index;
+        });
             var arcs = ori_arcs(arc_data);
             function getArc(radius:number){
                 return d3.arc()
@@ -102,26 +101,18 @@ export default class ForceDirectedGraphCanvas extends React.Component<IProps, IS
                     "text-anchor":"begin",
                     "dominant-baseline":"central",
                     "y_offset":+1
-                },
-                {
-                    "text":pieName[0],
-                    "text-anchor":"begin",
-                    "dominant-baseline":"central",
-                    "y_offset":-7.5
-                },
-                {
-                    "text":pieName[1],
-                    "text-anchor":"begin",
-                    "dominant-baseline":"central",
-                    "y_offset":0
-                },
-                {
-                    "text":pieName[2],
-                    "text-anchor":"begin",
-                    "dominant-baseline":"central",
-                    "y_offset":+19
-                },
+                }
             ]
+            let y_offset_list = [-7.5, 0, +19]
+            for(let i =0; i<models_length; i++){
+                legend_text_setting.push({
+                    "text":pieName[i],
+                    "text-anchor":"begin",
+                    "dominant-baseline":"central",
+                    "y_offset":y_offset_list[i]
+                })
+            }
+
             let max_pie_text_length = 0;
             legend_text_setting.forEach((d:any)=>{
                 let text = "" + d.text;
@@ -176,7 +167,7 @@ export default class ForceDirectedGraphCanvas extends React.Component<IProps, IS
                     return path;
         
                 }
-                for (let i = 0; i < 3; i++){
+                for (let i = 0; i < models_length; i++){
                     let background_enter = legend_pie.append("path").attr("class","arc_"+i)
                     let background = legend_pie.select("path.arc_"+i);
                     let background_enter_update  = background_enter.merge(background);
@@ -403,72 +394,7 @@ export default class ForceDirectedGraphCanvas extends React.Component<IProps, IS
         }else{
             transform = d3.zoomIdentity;
         }
-        function drawRectStroke(context:any, x:any, y:any, width:any, height:any, strokeColor:any="#bbb"){
-            context.beginPath();
-            context.strokeStyle = strokeColor;
-            context.rect(x, y, width, height);
-            context.stroke();
-        }
-        function drawRect(context:any, x:any, y:any, width:any, height:any, fillColor:any="#fff", opacity:any=0.8){
-            context.fillStyle = fillColor;
-            context.globalAlpha = opacity;
-            context.fillRect(x, y, width, height);
-            context.globalAlpha = 1.0;
-        }
-        function drawCircleStroke(context:any, color:any, radius:any, x:any, y:any, lineWidth:number){
-            context.lineWidth = lineWidth
-            context.strokeStyle = color;
-            context.beginPath();
-            context.arc(x, y, radius, 0, 2 * Math.PI, true);
-            context.stroke();
-        }
         
-        function drawCircle(context:any, color:any, radius:any, x:any, y:any){
-            context.beginPath();
-            context.arc(x, y, radius, 0, 2 * Math.PI, true);
-            context.fillStyle = color;
-            context.fill();
-        }
-        
-        function drawOnePie(context:any, color:any, radius:any, x:any, y:any, startAngle:any, endAngle:any){
-            context.beginPath();
-            context.moveTo(x,y);
-            context.arc(x, y, radius, startAngle, endAngle);
-            context.fillStyle = color;
-            context.closePath();
-            context.fill();
-        }
-        function drawNodeGlyph(context:any, colorlist:any, inner_radius:any, radius:any, outer_radius:any, x:any, y:any, enableStroke:boolean=false){
-            
-            drawCircle(context, colorlist[4], outer_radius, x, y);
-            if(enableStroke){
-                drawCircleStroke(context, "#000", outer_radius, x, y, 2);
-            }
-            drawOnePie(context, colorlist[1], outer_radius, x, y, (-150)/180*Math.PI, (-30)/180*Math.PI);
-            drawOnePie(context, colorlist[2], outer_radius, x, y, (-30)/180*Math.PI, (+90)/180*Math.PI);
-            drawOnePie(context, colorlist[3], outer_radius, x, y, (+90)/180*Math.PI, (+210)/180*Math.PI);
-            for(let i = 0; i<3; i++){
-                let angle = (-150+120*i)/180*Math.PI;
-                let x1 = x + radius*Math.cos(angle);
-                let y1 = y + radius*Math.sin(angle);
-                let x2 = x + outer_radius*Math.cos(angle);
-                let y2 = y + outer_radius*Math.sin(angle);
-                // drawLine(context, "#ddd", x1, y1, x2 ,y2, 0.5);
-                drawLine(context, colorlist[4], x1, y1, x2 ,y2, radius-inner_radius);
-            }
-            drawCircle(context, colorlist[4], radius, x, y);
-            drawCircle(context, colorlist[0], inner_radius, x, y);
-        }
-        function drawLine(context:any, color:any, x1:any, y1:any, x2:any, y2:any, linewidth:any=null){
-            context.strokeStyle = color;
-            if(linewidth){
-                context.lineWidth = linewidth;
-            }
-            context.beginPath();
-            context.moveTo(x1, y1);
-            context.lineTo(x2, y2);
-            context.stroke();
-        }
         function order_determine(a:any,b:any){
             let hover_cons_a = a.hasOwnProperty("hover_cons")?a.hover_cons:1;
             let hover_cons_b = b.hasOwnProperty("hover_cons")?b.hover_cons:1;

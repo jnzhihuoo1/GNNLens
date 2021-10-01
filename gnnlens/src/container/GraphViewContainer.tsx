@@ -14,7 +14,8 @@ const mapStateToProps = (state: StoreState) => ({
     showSource: state.showSource,
     select_inspect_node: state.select_inspect_node,
     extendedMode : state.extendedMode,
-    GraphViewSettingsModal_visible: state.GraphViewSettingsModal_visible
+    GraphViewSettingsModal_visible: state.GraphViewSettingsModal_visible,
+    selected_models_list: state.selected_models_list
 })
 
 // 将 对应action 插入到组件的 props 中

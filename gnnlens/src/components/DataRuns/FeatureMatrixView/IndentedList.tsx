@@ -73,6 +73,8 @@ export default class IndentedTree extends React.Component<IProps, IState>{
     }
     public renderD3(){
       let fdata:any = this.props.feature_matrix_json.indentedList;
+      let pieName:any = this.props.feature_matrix_json.pieName;
+      let models_length = pieName.length;
       let layout_config = this.props.layout_config;
 
       //console.log("fdata",fdata);          
@@ -124,26 +126,25 @@ export default class IndentedTree extends React.Component<IProps, IState>{
       }
 
         //let y_axis_color = color_info["y_axis_color"];
-
-        var arc_data = [{
-            "index":0,
-            "value":1/3
-            }, {
-            "index":1,
-            "value":1/3
-            }, {
-            "index":2,
-            "value":1/3
-        }];
+        var arc_data:any = [];
+        //console.log("Feature Matrix", models_length);
+        for(let i = 0; i<models_length; i++){
+            arc_data.push({
+                "index":i,
+                "value":1/models_length
+            })
+        }
+        let startAngle = -180 / models_length;
         var ori_arcs = d3.pie()
-                      .startAngle((-60/180) * Math.PI)
-                      .endAngle((2-60/180) * Math.PI)
-                      .value(function(a:any){
-                          return a.value;
-                      })
-                      .sort(function(a:any, b:any) {
-                          return a.index<b.index;
-                      });
+        .startAngle((startAngle/180) * Math.PI)
+        .endAngle((2+startAngle/180) * Math.PI)
+        .value(function(a:any){
+            return a.value;
+        })
+        .sort(function(a:any, b:any) {
+            return a.index<b.index;
+        });
+
         var arcs = ori_arcs(arc_data);
 
 
@@ -155,11 +156,11 @@ export default class IndentedTree extends React.Component<IProps, IState>{
         .attr("r", function(d:any){
               return radius*2
         })
-        .attr("fill", function(d:any,i:any) { return d.color[4]; });
+        .attr("fill", function(d:any,i:any) { return d.color[d.color.length-1]; });
 
 
         let overall_background = [];
-        for (let i = 0; i < 3; i++){
+        for (let i = 0; i < models_length; i++){
           let background_enter = y_axis_label_enter.append("path").attr("class","arc_"+i)
           let background = y_axis_labels.select("path.arc_"+i);
           let background_enter_update  = background_enter.merge(background);

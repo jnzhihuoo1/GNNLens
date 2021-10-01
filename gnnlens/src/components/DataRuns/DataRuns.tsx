@@ -11,7 +11,7 @@ import PSViewContainer from '../../container/PSViewContainer';
 import SelectedNodeListContainer from '../../container/SelectedNodeListContainer';
 import { getGraphInfo, getGraphBundledInfo, getRulesInfo } from '../../service/dataService';
 import { Select, Row, Col, Upload, Icon, Button, message, Tag } from 'antd';
-import {getInfectionNodeColor, getInfectionEdgeColor, getLayoutMode} from '../../helper';
+import {getInfectionNodeColor, getInfectionEdgeColor} from '../../helper';
 import {Tabs, Table} from 'antd';
 import GridLayout from "react-grid-layout";
 const TabPane = Tabs.TabPane
@@ -24,9 +24,14 @@ export interface IProps {
     graph : number | null,
     dataset_id : number | null,
     explain_id : number | null,
+    loading_dataset: boolean,
     modelList : any[],
     contentWidth:number,
-    contentHeight:number
+    contentHeight:number,
+    changeModelsList:any,
+    changeSelectedModels:any,
+    changeLoadingDataset:any,
+    clearIdInfo:any
 }
 export interface IState {
     graph_object : any,
@@ -132,14 +137,24 @@ export default class DataRuns extends React.Component<IProps, IState>{
      public async getGraphBundledData(dataset_id:number){
          let data = await getGraphBundledInfo(dataset_id);
          if(data["success"] === true){
+            this.props.changeLoadingDataset(true);
+            this.props.clearIdInfo();
             //let rules_data = await getRulesInfo(dataset_id);
             //if(rules_data["success"] === true){
             //    data["graph_obj"]["rules_data"] = rules_data["rule_obj"];
             data["graph_obj"]["bundle_id"] = dataset_id;
+            let models_list = data["graph_obj"]["individual_model_names"];
+            let selected_models_list = [];
+            for(let i = 0; i< 3 && i< models_list.length; i++){
+                selected_models_list.push(models_list[i]);
+            }
+            this.props.changeModelsList(models_list);
+            this.props.changeSelectedModels(selected_models_list);
             this.setState({
                 graph_object: data["graph_obj"]
                 })
             //}
+            this.props.changeLoadingDataset(false);
              
          }
      }
@@ -200,51 +215,27 @@ export default class DataRuns extends React.Component<IProps, IState>{
         }
      }
      componentDidUpdate(prevProps:IProps, prevState:IState) {
-        //console.log('Component did update!')
-        if(getLayoutMode() === 3){
-            if(prevProps.dataset_id!== this.props.dataset_id){
-                if( this.props.dataset_id  && this.props.dataset_id>=0){
-                    this.getGraphBundledData(this.props.dataset_id);
-                    
-                }else{
-                    this.setState({
-                        graph_object:{
-                            model : -1,
-                            graph : -1,  
-                        }
-                    })
-                }
-            }
-            /*
-            if(prevState.screenHeight!==this.state.screenHeight
-                || prevState.screenWidth !== this.state.screenWidth){
-                    this.setState({
-                        layout_config: this.getWholeLayoutConfig()
-                    })
-                }*/
-            if(prevProps.contentHeight!==this.props.contentHeight
-                || prevProps.contentWidth !== this.props.contentWidth){
-                    this.setState({
-                        layout_config: this.getWholeLayoutConfig()
-                    })
-                }   
-        }else{
-            if(prevProps.graph!== this.props.graph || prevProps.model !== this.props.model
-                || prevProps.dataset_id!== this.props.dataset_id || prevProps.explain_id !== this.props.explain_id ){
-                if(this.props.graph && this.props.model && this.props.dataset_id && this.props.explain_id
-                    && this.props.graph >= 0 && this.props.model >= 0 && this.props.dataset_id>=0 && this.props.explain_id>=0){
-                    this.getgraphdata(this.props.dataset_id, this.props.model, this.props.explain_id, this.props.graph);
-                    
-                }else{
-                    this.setState({
-                        graph_object:{
-                            model : -1,
-                            graph : -1,  
-                        }
-                    })
-                }
+        if(prevProps.dataset_id!== this.props.dataset_id){
+            if( this.props.dataset_id  && this.props.dataset_id>=0){
+                this.getGraphBundledData(this.props.dataset_id);
+                
+            }else{
+                this.setState({
+                    graph_object:{
+                        model : -1,
+                        graph : -1,  
+                    }
+                })
             }
         }
+        
+        if(prevProps.contentHeight!==this.props.contentHeight
+            || prevProps.contentWidth !== this.props.contentWidth){
+                this.setState({
+                    layout_config: this.getWholeLayoutConfig()
+                })
+            }   
+        
         
         
      }
@@ -278,28 +269,13 @@ export default class DataRuns extends React.Component<IProps, IState>{
         let model = -1;
         let graph = -1;
         let dataset_id = -1;
-        if(getLayoutMode()===3){
-            model = -1;
-            graph = -1;
-            let common = graph_object.common;
-            if(common){
-                dataset_id = common.dataset_id;
-            }
-        }else{
-            model = graph_object.model;
-            graph = graph_object.graph;
+
+        let common = graph_object.common;
+        if(common){
+            dataset_id = common.dataset_id;
         }
-        let generateTips = () =>{
-            let tips: any = "Please select a dataset, a model, an explantion method, and a graph.";
-            if(getLayoutMode() === 3){
-                tips = "Please select a dataset";
-            }
-            return(
-            <Row style={{marginTop: '6px', marginLeft: '6px'}} gutter={6}>
-            <div>{tips}</div>
-            </Row>
-            )
-        }
+        
+        
         
         console.log("Dataruns graph_object", graph_object);
         let generateGraphView = (graph_object: any, show_mode:number, explained_node:number, 
@@ -315,34 +291,7 @@ export default class DataRuns extends React.Component<IProps, IState>{
                 height={height}
                 />
         }
-        let generateMessagePassingView = (graph_object: any, show_mode:number, 
-            explained_node:number, onExplainNodeChange:any, onShowModeChange:any, 
-            model:number, modelList:any[], width: number, height:number) => {
-            return <MessagePassingViewContainer graph_object={graph_object} 
-                show_mode={show_mode}
-                explained_node={explained_node}
-                onExplainNodeChange={onExplainNodeChange}
-                onShowModeChange={onShowModeChange}
-                model={model}
-                modelList={modelList}
-                width={width}
-                height={height}
-                />
-        }
-        let generateEmbeddingView = (graph_object: any, show_mode:number, explained_node:number, 
-            onExplainNodeChange:any, onShowModeChange:any, model:number, modelList:any[], 
-            width: number, height: number) => {
-            return <EmbeddingViewContainer graph_object={graph_object} 
-                show_mode={show_mode}
-                explained_node={explained_node}
-                onExplainNodeChange={onExplainNodeChange}
-                onShowModeChange={onShowModeChange}
-                model={model}
-                modelList={modelList}
-                width={width}
-                height={height}
-                />
-        }
+        
         let generateFeatureMatrixView = (graph_object: any, show_mode:number, explained_node:number, 
             onExplainNodeChange:any, onShowModeChange:any, model:number, modelList:any[], 
             width: number, height: number) => {
@@ -371,30 +320,14 @@ export default class DataRuns extends React.Component<IProps, IState>{
                 height={height}
                 />
         }
-        /*let generateWholeView_backup = () =>{
-            return <Tabs
-                        defaultActiveKey="2"
-                    >
-                        <TabPane tab="Graph View" key="1">
-                            
-                            {generateGraphView(graph_object, show_mode, explained_node, 
-                                this.onExplainNodeChange, this.onShowModeChange, model, modelList)}
-                        </TabPane>
-                        <TabPane tab="Message Passing View" key="2">
-                            {generateMessagePassingView(graph_object, show_mode, explained_node, 
-                                this.onExplainNodeChange, this.onShowModeChange, model, modelList)} 
-                            
-                        </TabPane>
-                        
-                    </Tabs>
-        }*/
+        
         // layout is an array of objects, see the demo for more complete usage
         let enableStatic = true;
         let screenheight = window.innerHeight;
         let max_row_num = Math.floor(this.props.contentHeight / 40);
         // small width, height: 1707 724
         // big width, height: 2560 1175
-        let ControlPanelH = 4;
+        let ControlPanelH = 6;
         let PSPanelH = max_row_num - ControlPanelH;
         let ProjectionPanelH = Math.floor(max_row_num / 2);
         let RH = max_row_num - ProjectionPanelH;
@@ -409,166 +342,55 @@ export default class DataRuns extends React.Component<IProps, IState>{
         ];
         
 
-
+        let loading_dataset = this.props.loading_dataset;
         let generateWholeView = () =>{
-            let layout_mode:any = getLayoutMode();
             let screenwidth = window.innerWidth;
             let screenheight = window.innerHeight;
-            let viewwidth = screenwidth * 1/3;
-            let viewheight = screenheight* 0.45;
-            if(layout_mode === 1){
-                // Layout Style 1
-                return (
-                    <Row style={{marginTop: '0px', marginLeft: '6px'}} gutter={6}>
-                        <Row gutter={6}>
-                            <Col span={4}>
-                                <div style={{width: "100%", overflowX: "scroll", height:""+(screenheight- 50)+"px"}}>
-                                 {generatePCPView(graph_object, show_mode, explained_node, 
-                                        this.onExplainNodeChange, this.onShowModeChange, model, modelList)} 
-                                </div>
-                            </Col>
-                            <Col span={14}>
-                                    {generateGraphView(graph_object, show_mode, explained_node, 
-                                    this.onExplainNodeChange, this.onShowModeChange, model, modelList, 
-                                     viewwidth * 3 * 14 / 24, viewheight / 0.45 * 0.7)}
-                            </Col>
-                            <Col span={6}>
-                                <Row>
-                                    {generateMessagePassingView(graph_object, show_mode, explained_node, 
-                                        this.onExplainNodeChange, this.onShowModeChange, model, modelList, 
-                                        viewwidth * 3 * 6 / 24, viewheight / 0.45 * 0.25)} 
-                                </Row>
-                                <Row>
-                                    {generateEmbeddingView(graph_object, show_mode, explained_node, 
-                                        this.onExplainNodeChange, this.onShowModeChange, model, modelList,
-                                    viewwidth* 3 * 6 / 24, viewheight/ 0.45 * 0.25)} 
-                                </Row>
-                            </Col>
-
-                        </Row>
-                        <Row>
-                                {generateFeatureMatrixView(graph_object, show_mode, explained_node, 
-                                        this.onExplainNodeChange, this.onShowModeChange, model, modelList,
-                                    viewwidth* 3 , viewheight / 0.45)} 
-                        </Row>
-                    </Row>)
-            }else if(layout_mode===2){
-                return (<Row style={{marginTop: '0px', marginLeft: '6px'}} gutter={6}>
-                        <Row>
-                            <Col span={24}>
-                                <div style={{width: "100%", height:""+(screenheight*0.31)+"px"}}>
-                            {generatePCPView(graph_object, show_mode, explained_node, 
-                                        this.onExplainNodeChange, this.onShowModeChange, model, modelList)} 
-                            </div>
-                            </Col>
-                        </Row>
-                        <Row gutter={6}>
-                            <Col span={16}>
-                            
-                            {generateGraphView(graph_object, show_mode, explained_node, 
-                            this.onExplainNodeChange, this.onShowModeChange, model, modelList, 
-                        viewwidth * 3 * 16 / 24, viewheight )}
-                            </Col>
-                            <Col span={8}>
-                            {generateMessagePassingView(graph_object, show_mode, explained_node, 
-                                    this.onExplainNodeChange, this.onShowModeChange, model, modelList, 
-                                    viewwidth * 3 * 8 / 24, viewheight)} 
-                            </Col>
-                        </Row>
-                        <Row>
-                            {generateFeatureMatrixView(graph_object, show_mode, explained_node, 
-                                    this.onExplainNodeChange, this.onShowModeChange, model, modelList,
-                                viewwidth* 3 , viewheight / 0.45)} 
-                        </Row>
-                    </Row>
-                )
-            }else if(layout_mode === 3){
-                /*
-                return (<Row style={{marginTop: '0px', marginLeft: '6px'}} gutter={6}>
-                        <Row gutter={6}>
-                            <Col span={6}>
-                                <div style={{width: "100%", height:""+(screenheight - 50)+"px", overflowX: "scroll"}}>
-                                    
-                                 {(dataset_id>=0)?generatePCPView(graph_object, show_mode, explained_node, 
-                                        this.onExplainNodeChange, this.onShowModeChange, model, modelList):
-                                        <div>
-                                                <div className="ViewTitle">Control Panel</div>
-                                                <div className="ViewBox">
-                                                        <SidePanelContainer />
-                                                </div>
-                                        </div>}
-                                </div>
-                            </Col>
-                            <Col span={18}>
-                            
-                                    {(dataset_id>=0)?generateGraphView(graph_object, show_mode, explained_node, 
-                                    this.onExplainNodeChange, this.onShowModeChange, model, modelList, 
-                                viewwidth * 3 * 18 / 24, viewheight/0.45*0.90 ):<div />}
-                            </Col>
-                            
-                        </Row>
-                        <Row>
-                            {(dataset_id>=0)?generateFeatureMatrixView(graph_object, show_mode, explained_node, 
-                                    this.onExplainNodeChange, this.onShowModeChange, model, modelList,
-                                viewwidth* 3 , viewheight / 0.45):<div />} 
-                        </Row>
-                    </Row>
-                )*/
-                return <GridLayout className="layout" layout={layout} 
-                cols={24} rowHeight={30} width={screenwidth} onLayoutChange={this.onLayoutChange}
-                onResizeStop={this.onResizeStop}>
-                    <div className="PanelBox" key="a" ref={this.PCPViewRef}>
-                        
-                                    
-                            {(dataset_id>=0 && this.getCurrentLayoutConfig("PCPView"))?
-                            generatePCPView(graph_object, show_mode, explained_node, 
-                                    this.onExplainNodeChange, this.onShowModeChange, model, modelList
-                                    ,this.getCurrentLayoutConfig("PCPView")["width"], this.getCurrentLayoutConfig("PCPView")["height"]):
-                                    <div />}
-                            
-
-                    </div>
-                    <div className="PanelBox" key="b" ref={this.GraphViewRef}>
-                    {(dataset_id>=0 && this.getCurrentLayoutConfig("GraphView"))?generateGraphView(graph_object, show_mode, explained_node, 
-                                    this.onExplainNodeChange, this.onShowModeChange, model, modelList, 
-                                    this.getCurrentLayoutConfig("GraphView")["width"], this.getCurrentLayoutConfig("GraphView")["height"]):<div />}
-                    </div>
-                    <div className="PanelBox" key="c" ref={this.FeatureMatrixViewRef}>
-                    {(dataset_id>=0 && this.getCurrentLayoutConfig("FeatureMatrixView"))?generateFeatureMatrixView(graph_object, show_mode, explained_node, 
-                                    this.onExplainNodeChange, this.onShowModeChange, model, modelList,
-                                    this.getCurrentLayoutConfig("FeatureMatrixView")["width"], this.getCurrentLayoutConfig("FeatureMatrixView")["height"]):<div />} 
-                    </div>
-                    <div className="PanelBox" key="d" ref={this.ControlPanelRef}>
-                        <ControlPanelContainer />
-                    </div>
-                    <div className="PanelBox" key="e" ref={this.ProjectionViewRef}>
-                    {(dataset_id>=0 && this.getCurrentLayoutConfig("ProjectionView"))?(
-                    <SelectedNodeListContainer height={this.getCurrentLayoutConfig("ProjectionView")["height"]} width={this.getCurrentLayoutConfig("ProjectionView")["width"]}/>)
-                    :(<div />)}
-
-                    </div>
-                </GridLayout>
-            }else{
-                return <div>Unknown Layout Style</div>
-            }
-        }
-        if(getLayoutMode() === 3){
-
-        }
-        if(getLayoutMode() === 3){
-            return (
-                    generateWholeView()
+            //let viewwidth = screenwidth * 1/3;
+            // let viewheight = screenheight* 0.45;
+            
+            return <GridLayout className="layout" layout={layout} 
+            cols={24} rowHeight={30} width={screenwidth} onLayoutChange={this.onLayoutChange}
+            onResizeStop={this.onResizeStop}>
+                <div className="PanelBox" key="a" ref={this.PCPViewRef}>
                     
-            )
-        }else{
-            return (
-                (graph>=0 && model >=0)?(
-                    generateWholeView())
-                    :
-                    (generateTips()
-                    )
-            )
+                                
+                        {(dataset_id>=0 && !loading_dataset && this.getCurrentLayoutConfig("PCPView"))?
+                        generatePCPView(graph_object, show_mode, explained_node, 
+                                this.onExplainNodeChange, this.onShowModeChange, model, modelList
+                                ,this.getCurrentLayoutConfig("PCPView")["width"], this.getCurrentLayoutConfig("PCPView")["height"]):
+                                <div />}
+                        
+
+                </div>
+                <div className="PanelBox" key="b" ref={this.GraphViewRef}>
+                {(dataset_id>=0 && !loading_dataset && this.getCurrentLayoutConfig("GraphView"))?generateGraphView(graph_object, show_mode, explained_node, 
+                                this.onExplainNodeChange, this.onShowModeChange, model, modelList, 
+                                this.getCurrentLayoutConfig("GraphView")["width"], this.getCurrentLayoutConfig("GraphView")["height"]):<div />}
+                </div>
+                <div className="PanelBox" key="c" ref={this.FeatureMatrixViewRef}>
+                {(dataset_id>=0 && !loading_dataset && this.getCurrentLayoutConfig("FeatureMatrixView"))?generateFeatureMatrixView(graph_object, show_mode, explained_node, 
+                                this.onExplainNodeChange, this.onShowModeChange, model, modelList,
+                                this.getCurrentLayoutConfig("FeatureMatrixView")["width"], this.getCurrentLayoutConfig("FeatureMatrixView")["height"]):<div />} 
+                </div>
+                <div className="PanelBox" key="d" ref={this.ControlPanelRef}>
+                    <ControlPanelContainer />
+                </div>
+                <div className="PanelBox" key="e" ref={this.ProjectionViewRef}>
+                {(dataset_id>=0 && !loading_dataset && this.getCurrentLayoutConfig("ProjectionView"))?(
+                <SelectedNodeListContainer height={this.getCurrentLayoutConfig("ProjectionView")["height"]} width={this.getCurrentLayoutConfig("ProjectionView")["width"]}/>)
+                :(<div />)}
+
+                </div>
+            </GridLayout>
+            
         }
+        
+        return (
+                generateWholeView()
+                
+        )
+        
         
 
     }

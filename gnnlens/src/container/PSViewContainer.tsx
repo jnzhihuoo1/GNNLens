@@ -10,7 +10,8 @@ import { StoreState } from '../types';
 // 将 reducer 中的状态插入到组件的 props 中
 const mapStateToProps = (state: StoreState) => ({
     checkedList: state.InspectCategoryList,
-    K_value:state.K_value
+    K_value:state.K_value,
+    selected_models_list: state.selected_models_list
 })
 
 // 将 对应action 插入到组件的 props 中
