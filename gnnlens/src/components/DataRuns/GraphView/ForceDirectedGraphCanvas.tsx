@@ -44,6 +44,31 @@ export default class ForceDirectedGraphCanvas extends React.Component<IProps, IS
      public updateTransform(transform:any){
          this.saved_transform = transform;
      }
+     public renderColorLegend(legend_color_svg:any, colorLegend:number){
+        let row_legend_color = legend_color_svg.selectAll("g.legend_row_color")
+                                .data(colorLegend, function(d:any,i:any){
+                                    return d.text+"_"+i+"_"+d.color;
+                                });
+        let g_row_legend_color = row_legend_color.enter().append("g")
+                            .attr("class","legend_row_color")
+                            .attr("transform", function(d:any,i:any){
+                                return "translate(10,"+(10+i*20)+")";
+                            });
+            g_row_legend_color.append("circle")
+                            .attr("r", 5)
+                            .attr("fill", function(d:any){
+                                return d.color;
+                            })
+                            
+            g_row_legend_color.append("text")
+                            .attr("x", 10)
+                            .attr("y", 5)
+                            .text(function(d:any){
+                                return d.text;
+                            })
+                            
+            row_legend_color.exit().remove();
+     }
      public renderLegend(legend_configuration:any){
         var width = legend_configuration["width"];
         var height = legend_configuration["height"];
@@ -84,200 +109,182 @@ export default class ForceDirectedGraphCanvas extends React.Component<IProps, IS
         .sort(function(a:any, b:any) {
             return a.index<b.index;
         });
-            var arcs = ori_arcs(arc_data);
-            function getArc(radius:number){
-                return d3.arc()
-                .innerRadius(radius)
-                .outerRadius(radius*2);
+        var arcs = ori_arcs(arc_data);
+        function getArc(radius:number){
+            return d3.arc()
+            .innerRadius(radius)
+            .outerRadius(radius*2);
+        }
+        let legend_x = 30;
+        let legend_y = 50;
+        //let legend_width = 200;
+        let legend_height = 100;
+        let legned_scale = 3;
+        let legend_text_setting = [
+            {
+                "text":"Label",
+                "text-anchor":"begin",
+                "dominant-baseline":"central",
+                "y_offset":+1
             }
-            let legend_x = 30;
-            let legend_y = 50;
-            //let legend_width = 200;
-            let legend_height = 100;
-            let legned_scale = 3;
-            let legend_text_setting = [
-                {
-                    "text":"Label",
-                    "text-anchor":"begin",
-                    "dominant-baseline":"central",
-                    "y_offset":+1
-                }
-            ]
-            let y_offset_list = [-7.5, 0, +19]
-            for(let i =0; i<models_length; i++){
-                legend_text_setting.push({
-                    "text":pieName[i],
-                    "text-anchor":"begin",
-                    "dominant-baseline":"central",
-                    "y_offset":y_offset_list[i]
-                })
-            }
-
-            let max_pie_text_length = 0;
-            legend_text_setting.forEach((d:any)=>{
-                let text = "" + d.text;
-                if(text.length>max_pie_text_length){
-                    max_pie_text_length = text.length;
-                }
+        ]
+        let y_offset_list = [-7.5, 0, +19]
+        for(let i =0; i<models_length; i++){
+            legend_text_setting.push({
+                "text":pieName[i],
+                "text-anchor":"begin",
+                "dominant-baseline":"central",
+                "y_offset":y_offset_list[i]
             })
-            
-            let legend_width = max_pie_text_length*8+80;
+        }
+
+        let max_pie_text_length = 0;
+        legend_text_setting.forEach((d:any)=>{
+            let text = "" + d.text;
+            if(text.length>max_pie_text_length){
+                max_pie_text_length = text.length;
+            }
+        })
+        
+        let legend_width = max_pie_text_length*8+80;
 
 
-            this.refresh_number = this.refresh_number + 1;
-            let legend_pie_all = legend_svg.selectAll("g.legend_pie")
-                            .data([this.refresh_number], function(d:any){
-                                return d;
-                            });
-                legend_pie_all.exit().remove();
-            //console.log("Refreshnumber",this.refresh_number,pieName);
-            let legend_pie = legend_pie_all.enter().append("g")
-                            .attr("class", "legend_pie")
-                            .attr("transform", "translate("+legend_x+","+legend_y+")")
-            legend_pie.append("rect")
-            .attr("x", -legend_x)
-            .attr("y", -legend_y)
-            .attr("width", legend_width)
-            .attr("height", legend_height)
-            .attr("fill", "#fff")
-            .attr("opacity", 0.8)
-            .attr("stroke", "#bbb")
-            .attr("stroke-width", 1)
-            .attr("rx",3)
-            .attr("ry",3)
-                            //let overall_background = [];
-            let legend_Color = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728"];
-            legend_pie.append("circle")
-            .attr("class","inner_circle")
-            .attr("r", inner_radius*legned_scale)
-            .attr("fill", function(d:any) { return legend_Color[0]; })
-            .attr("stroke", "white");
+        this.refresh_number = this.refresh_number + 1;
+        let legend_pie_all = legend_svg.selectAll("g.legend_pie")
+                        .data([this.refresh_number], function(d:any){
+                            return d;
+                        });
+            legend_pie_all.exit().remove();
+        //console.log("Refreshnumber",this.refresh_number,pieName);
+        let legend_pie = legend_pie_all.enter().append("g")
+                        .attr("class", "legend_pie")
+                        .attr("transform", "translate("+legend_x+","+legend_y+")")
+        legend_pie.append("rect")
+        .attr("x", -legend_x)
+        .attr("y", -legend_y)
+        .attr("width", legend_width)
+        .attr("height", legend_height)
+        .attr("fill", "#fff")
+        .attr("opacity", 0.8)
+        .attr("stroke", "#bbb")
+        .attr("stroke-width", 1)
+        .attr("rx",3)
+        .attr("ry",3)
+                        //let overall_background = [];
+        let legend_Color = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728"];
+        legend_pie.append("circle")
+        .attr("class","inner_circle")
+        .attr("r", inner_radius*legned_scale)
+        .attr("fill", function(d:any) { return legend_Color[0]; })
+        .attr("stroke", "white");
     
             
-                function constructPathOnNodeList(nodelist:any){
-                    // 
-                    let path = "";
-                    for(let i = 0; i<nodelist.length;i++){
-                        let note = "M";
-                        if(i>0){
-                            note = "L"
-                        }
-                        path = path+note+nodelist[i][0]+" "+nodelist[i][1]+" ";
-                    }
-                    return path;
-        
+        function constructPathOnNodeList(nodelist:any){
+            // 
+            let path = "";
+            for(let i = 0; i<nodelist.length;i++){
+                let note = "M";
+                if(i>0){
+                    note = "L"
                 }
-                for (let i = 0; i < models_length; i++){
-                    let background_enter = legend_pie.append("path").attr("class","arc_"+i)
-                    let background = legend_pie.select("path.arc_"+i);
-                    let background_enter_update  = background_enter.merge(background);
-                    background_enter_update
-                    .style("fill", function(d:any){
-                        return legend_Color[i+1]
-                    })
-                    .attr("d", getArc(radius*legned_scale)(arcs[i]))
-                    .style("stroke","#ddd")
-                    .style("stroke-width",1);
-                    //overall_background.push(background_enter_update);
+                path = path+note+nodelist[i][0]+" "+nodelist[i][1]+" ";
+            }
+            return path;
+
+        }
+        for (let i = 0; i < models_length; i++){
+            let background_enter = legend_pie.append("path").attr("class","arc_"+i)
+            let background = legend_pie.select("path.arc_"+i);
+            let background_enter_update  = background_enter.merge(background);
+            background_enter_update
+            .style("fill", function(d:any){
+                return legend_Color[i+1]
+            })
+            .attr("d", getArc(radius*legned_scale)(arcs[i]))
+            .style("stroke","#ddd")
+            .style("stroke-width",1);
+            //overall_background.push(background_enter_update);
+
+            let start_point = [1.5*legned_scale*radius*Math.sin((+120*i)/180*Math.PI), 1.5*legned_scale*radius*(-Math.cos((+120*i)/180*Math.PI))]
+            let middle_point = [1.5*legned_scale*radius*Math.sin((+120*i)/180*Math.PI), 2.5*legned_scale*radius*(-Math.cos((+120*i)/180*Math.PI))+legend_text_setting[i+1]["y_offset"]]
+
+            if(i===1){
+                middle_point= [2.5*legned_scale*radius*Math.sin((+120*i)/180*Math.PI), 2.5*legned_scale*radius*(-Math.cos((+120*i)/180*Math.PI))+legend_text_setting[i+1]["y_offset"]]
+            }else{
+
+            }
+            let end_point = [2.5*legned_scale*radius*Math.sin((+60)/180*Math.PI) ,2.5*legned_scale*radius*(-Math.cos((+120*i)/180*Math.PI))+legend_text_setting[i+1]["y_offset"]]
+
+            legend_pie.append("path")
+                .attr("stroke", legend_line_style["stroke"])
+                .attr("stroke-width", legend_line_style["stroke-width"])
+                .style("stroke-dasharray",legend_line_style["stroke-dasharray"])
+                .attr("d", constructPathOnNodeList([start_point,middle_point, end_point]))
+                .attr("fill", "none")
+            legend_pie.append("text")
+                .attr("x", end_point[0])
+                .attr("y", end_point[1])
+                .attr("text-anchor", legend_text_setting[i+1]["text-anchor"])
+                .attr("dominant-baseline", legend_text_setting[i+1]["dominant-baseline"])
+                .text(legend_text_setting[i+1]["text"])
+        }
+        let gt_x = 2.5*legned_scale*radius*Math.sin((+60)/180*Math.PI);
+        let gt_y = 2.5*legned_scale*radius*(-Math.cos((+60)/180*Math.PI))+legend_text_setting[0]["y_offset"];
+        legend_pie.append("line")
+                .attr("stroke", legend_line_style["stroke"])
+                .attr("stroke-width", legend_line_style["stroke-width"])
+                .style("stroke-dasharray",legend_line_style["stroke-dasharray"])
+                .attr("x1", 0)
+                .attr("y1", 0)
+                .attr("x2", gt_x)
+                .attr("y2", gt_y);
+        legend_pie.append("text")
+                .attr("x", gt_x)
+                .attr("y", gt_y)
+                .attr("text-anchor", legend_text_setting[0]["text-anchor"])
+                .attr("dominant-baseline", legend_text_setting[0]["dominant-baseline"])
+                .text(legend_text_setting[0]["text"])
+        // x = 7.5*Radius*(sin(60/180/240))
+        // y = 7.5*Radius*(-cos(60/180/240)) 
         
-                    let start_point = [1.5*legned_scale*radius*Math.sin((+120*i)/180*Math.PI), 1.5*legned_scale*radius*(-Math.cos((+120*i)/180*Math.PI))]
-                    let middle_point = [1.5*legned_scale*radius*Math.sin((+120*i)/180*Math.PI), 2.5*legned_scale*radius*(-Math.cos((+120*i)/180*Math.PI))+legend_text_setting[i+1]["y_offset"]]
-        
-                    if(i===1){
-                        middle_point= [2.5*legned_scale*radius*Math.sin((+120*i)/180*Math.PI), 2.5*legned_scale*radius*(-Math.cos((+120*i)/180*Math.PI))+legend_text_setting[i+1]["y_offset"]]
-                    }else{
-        
-                    }
-                    let end_point = [2.5*legned_scale*radius*Math.sin((+60)/180*Math.PI) ,2.5*legned_scale*radius*(-Math.cos((+120*i)/180*Math.PI))+legend_text_setting[i+1]["y_offset"]]
-        
-                    legend_pie.append("path")
-                        .attr("stroke", legend_line_style["stroke"])
-                        .attr("stroke-width", legend_line_style["stroke-width"])
-                        .style("stroke-dasharray",legend_line_style["stroke-dasharray"])
-                        .attr("d", constructPathOnNodeList([start_point,middle_point, end_point]))
-                        .attr("fill", "none")
-                    legend_pie.append("text")
-                        .attr("x", end_point[0])
-                        .attr("y", end_point[1])
-                        .attr("text-anchor", legend_text_setting[i+1]["text-anchor"])
-                        .attr("dominant-baseline", legend_text_setting[i+1]["dominant-baseline"])
-                        .text(legend_text_setting[i+1]["text"])
-                }
-                let gt_x = 2.5*legned_scale*radius*Math.sin((+60)/180*Math.PI);
-                let gt_y = 2.5*legned_scale*radius*(-Math.cos((+60)/180*Math.PI))+legend_text_setting[0]["y_offset"];
-                legend_pie.append("line")
-                        .attr("stroke", legend_line_style["stroke"])
-                        .attr("stroke-width", legend_line_style["stroke-width"])
-                        .style("stroke-dasharray",legend_line_style["stroke-dasharray"])
-                        .attr("x1", 0)
-                        .attr("y1", 0)
-                        .attr("x2", gt_x)
-                        .attr("y2", gt_y);
-                legend_pie.append("text")
-                        .attr("x", gt_x)
-                        .attr("y", gt_y)
-                        .attr("text-anchor", legend_text_setting[0]["text-anchor"])
-                        .attr("dominant-baseline", legend_text_setting[0]["dominant-baseline"])
-                        .text(legend_text_setting[0]["text"])
-                // x = 7.5*Radius*(sin(60/180/240))
-                // y = 7.5*Radius*(-cos(60/180/240)) 
+        // ---------------- Color Legend -------------------------//
+         let legend_color_x = 10;
+
+        // Calculate the legend color width and height.
+         let max_text_length = 0;
+         colorLegend.forEach((d:any)=>{
+             let text = "" + d.text;
+             if(text.length>max_text_length){
+                 max_text_length = text.length;
+             }
+         })
+         
+         let legend_color_width = max_text_length*8+24;
+         //console.log("maxtextlength", max_text_length, legend_color_width);
+         let legend_color_height = colorLegend.length*20;
+         // ----------------------------------------------
+
+         let legend_color_y = legend_pie_y - legend_color_height - 10;
+         var legend_color_svg = top_svg.select("#ForceDirectedColorLegend")
+             .attr("width", legend_color_width)
+             .attr("height", legend_color_height)
+             .attr("transform", "translate("+legend_color_x+","+legend_color_y+")")
+         let legend_rect = legend_color_svg.selectAll("rect").data([0]);
+         let legend_rect_enter = legend_rect.enter().append("rect");
+         //console.log("legend_rect", legend_rect);
+         legend_rect_enter.merge(legend_rect)
+             .attr("x", 0)
+             .attr("y", 0)
+             .attr("width", legend_color_width)
+             .attr("height", legend_color_height)
+             .attr("fill", "#fff")
+             .attr("opacity", 0.8)
+             .attr("stroke", "#bbb")
+             .attr("stroke-width", 1)
+             .attr("rx",3)
+             .attr("ry",3);
+        this.renderColorLegend(legend_color_svg, colorLegend);
                 
-                // ---------------- Color Legend -------------------------//
-                
-                let legend_color_x = 10;
-                let max_text_length = 0;
-                colorLegend.forEach((d:any)=>{
-                    let text = "" + d.text;
-                    if(text.length>max_text_length){
-                        max_text_length = text.length;
-                    }
-                })
-                
-                let legend_color_width = max_text_length*8+24;
-                //console.log("maxtextlength", max_text_length, legend_color_width);
-                let legend_color_height = colorLegend.length*20;
-                let legend_color_y = legend_pie_y - legend_color_height - 10;
-                var legend_color_svg = top_svg.select("#ForceDirectedColorLegend")
-                    .attr("width", legend_color_width)
-                    .attr("height", legend_color_height)
-                    .attr("transform", "translate("+legend_color_x+","+legend_color_y+")")
-                let legend_rect = legend_color_svg.selectAll("rect").data([0]);
-                let legend_rect_enter = legend_rect.enter().append("rect");
-                //console.log("legend_rect", legend_rect);
-                legend_rect_enter.merge(legend_rect)
-                    .attr("x", 0)
-                    .attr("y", 0)
-                    .attr("width", legend_color_width)
-                    .attr("height", legend_color_height)
-                    .attr("fill", "#fff")
-                    .attr("opacity", 0.8)
-                    .attr("stroke", "#bbb")
-                    .attr("stroke-width", 1)
-                    .attr("rx",3)
-                    .attr("ry",3);
-                let row_legend_color = legend_color_svg.selectAll("g.legend_row_color")
-                                        .data(colorLegend, function(d:any,i:any){
-                                            return d.text+"_"+i+"_"+d.color;
-                                        });
-                let g_row_legend_color = row_legend_color.enter().append("g")
-                                    .attr("class","legend_row_color")
-                                    .attr("transform", function(d:any,i:any){
-                                        return "translate(10,"+(10+i*20)+")";
-                                    });
-                    g_row_legend_color.append("circle")
-                                    .attr("r", 5)
-                                    .attr("fill", function(d:any){
-                                        return d.color;
-                                    })
-                                    
-                    g_row_legend_color.append("text")
-                                    .attr("x", 10)
-                                    .attr("y", 5)
-                                    .text(function(d:any){
-                                        return d.text;
-                                    })
-                                    
-                    row_legend_color.exit().remove();
      }
      public renderCanvas(){
 

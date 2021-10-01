@@ -314,6 +314,7 @@ export default class SelectedNodeList extends React.Component<SelectedNodeListPr
                                 updateSingleHighlightNodeStatus={this.updateSingleHighlightNodeStatus}
                                 enableLegends={this.state.enableLegends}
                                 layoutMode={this.state.layoutMode}
+                                graph_additional_info={this.props.PCPJson.graph_additional_info}
                                 />
                             })}
                             

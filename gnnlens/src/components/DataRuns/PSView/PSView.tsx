@@ -518,7 +518,8 @@ export default class PSView extends React.Component<IProps, IState>{
                     "PSData":PSData,
                     "accuracy":whole_accuracy,
                     "nodenum":selected_mask.length,
-                    "pie_name":pie_name
+                    "pie_name":pie_name,
+                    "graph_additional_info":common.graph_additional_info
                 }
                 return graph_json;
             }

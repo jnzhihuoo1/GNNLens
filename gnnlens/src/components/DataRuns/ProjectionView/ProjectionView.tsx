@@ -42,7 +42,8 @@ export interface ProjectionViewProps {
     dataPackage:any,
     updateSingleHighlightNodeStatus:any,
     enableLegends:boolean,
-    layoutMode:number
+    layoutMode:number,
+    graph_additional_info:any
 }
 
 export interface ProjectionViewState {
@@ -1037,6 +1038,33 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
             this.wrapLines(text);
         }
     }
+    public renderColorLegend(legend_color_svg:any, colorLegend:number){
+        console.log("Rendering Color Legend in Projection View...", legend_color_svg, colorLegend);
+
+        let row_legend_color = legend_color_svg.selectAll("g.legend_row_color")
+                                .data(colorLegend, function(d:any,i:any){
+                                    return d.text+"_"+i+"_"+d.color;
+                                });
+        let g_row_legend_color = row_legend_color.enter().append("g")
+                            .attr("class","legend_row_color")
+                            .attr("transform", function(d:any,i:any){
+                                return "translate(10,"+(10+i*20)+")";
+                            });
+            g_row_legend_color.append("circle")
+                            .attr("r", 5)
+                            .attr("fill", function(d:any){
+                                return d.color;
+                            })
+                            
+            g_row_legend_color.append("text")
+                            .attr("x", 10)
+                            .attr("y", 5)
+                            .text(function(d:any){
+                                return d.text;
+                            })
+                            
+            row_legend_color.exit().remove();
+     }
     public renderLegend(data_package:any){
         let configuration = data_package["configuration"];
         let tooltip_svg = data_package["tooltip_svg"];
@@ -1104,6 +1132,16 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                 "legend_text_setting":legend_text_setting
             }
             this.renderLegendGT3PT(legend_svg, e.refresh_number, radius_gap, radius, legend_configuration, additional_info);
+            
+            // render color legend.
+            if(legendMode === 2){
+                let color_svg = data_package["color_svg"];
+                let colorLegend = data_package["colorLegend"];
+                this.renderColorLegend(color_svg, colorLegend);
+            }
+            
+
+
         }else if(showMode === 2){
             let legend_x = 30;
             let legend_y = 45;
@@ -1604,6 +1642,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
             "height": this.props.height
         }
         let additional_info = this.additional_info;
+        let graph_additional_info = this.props.graph_additional_info;
         var width = configuration["width"];
         var height = configuration["height"]; // rect height
         if(height<1){
@@ -1632,17 +1671,21 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         var legend_height = legendHeight + legend_top_padding;
         var legend_width = legendWidth + legend_left_padding;
         legend_width = Math.min(width, legend_width);
+        // --> legend_left_padding --> legendWidth
+        //  || blank || legendHeight || legend_top_padding
         d3.select("#ScatterPlot_sub_legend"+this.props.id).remove();
+        d3.select("#ScatterPlot_sub_colorlegend"+this.props.id).remove();
         var legend_top_svg = d3.select("#TopSVGChart_ScatterPlot_Legend_"+this.props.id);
 
         if(enableLegends){
             console.log("Enable projection view legends rendering...")
             
-
+            let legend_glyph_y = height-legend_height;
+            // Position (legend_left_padding, height - legend_top_padding - legendHeight)
             var legend_svg = legend_top_svg.append("g")
             .attr("id","ScatterPlot_sub_legend"+this.props.id)
             .attr("transform", function() {
-                return "translate(" + legend_left_padding + "," +  (height-legend_height) + ")";
+                return "translate(" + legend_left_padding + "," +  (legend_glyph_y) + ")";
                 })
             .attr("width", legend_width - legend_left_padding)
             .attr("height", legend_height-legend_top_padding);
@@ -1657,8 +1700,8 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
             .attr("fill-opacity",0.9)
             .attr("stroke-opacity",0.5)
             ;
-
-            var data_package = {
+            // Rect [0, 0, legendWidth, legendHeight]
+            var data_package:any = {
                 "configuration":configuration,
                 "tooltip_svg":legend_svg,
                 "additional_info":additional_info,
@@ -1666,6 +1709,79 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                 "showMode": showMode,
                 "legendMode": 2
             }
+            if(showMode === 1)
+            {
+
+                let getColorLegend = () =>{
+                    let graph_info = graph_additional_info;
+                    //let graph_info = common.graph_additional_info;
+                    let num_class = graph_info.num_class;
+                    let label = [];
+                    if(Object.keys(graph_info).indexOf("idx_to_class")>=0){
+                        let idx_to_class = graph_info.idx_to_class;
+                        for(let i = 0; i< num_class;i++){
+                            label.push({
+                                "text":""+i+":"+idx_to_class[i],
+                                "color":getCoraNodeColor(i,2)
+                            })
+                        }
+                    }else{
+                        for(let i = 0; i< num_class;i++){
+                            label.push({
+                                "text":i,
+                                "color":getCoraNodeColor(i,2)
+                            })
+                        }
+                    }
+                    return label;
+                }
+                let colorLegend = getColorLegend();
+                let legend_color_x = 10;
+
+                // ---- Calculate the legend color width and height.
+                let max_text_length = 0;
+                colorLegend.forEach((d:any)=>{
+                    let text = "" + d.text;
+                    if(text.length>max_text_length){
+                        max_text_length = text.length;
+                    }
+                })
+                
+                let legend_color_width = max_text_length*8+24;
+                //console.log("maxtextlength", max_text_length, legend_color_width);
+                let legend_color_height = colorLegend.length*20;
+                // ----------------------------------------------
+    
+                // || blank || legend_color_height || 10 || legend_glyph_y           
+                let legend_color_y = legend_glyph_y - 10 - legend_color_height;
+    
+                var legend_color_svg = legend_top_svg.append("g")
+                    .attr("id", "ScatterPlot_sub_colorlegend"+this.props.id)
+                    .attr("width", legend_color_width)
+                    .attr("height", legend_color_height)
+                    .attr("transform", "translate("+legend_color_x+","+legend_color_y+")")
+                let legend_rect = legend_color_svg.selectAll("rect").data([0]);
+                let legend_rect_enter = legend_rect.enter().append("rect");
+                //console.log("legend_rect", legend_rect);
+                legend_rect_enter.merge(legend_rect)
+                    .attr("x", 0)
+                    .attr("y", 0)
+                    .attr("width", legend_color_width)
+                    .attr("height", legend_color_height)
+                    .attr("fill", "#fff")
+                    .attr("opacity", 0.8)
+                    .attr("stroke", "#bbb")
+                    .attr("stroke-width", 1)
+                    .attr("rx",3)
+                    .attr("ry",3);
+    
+                data_package["color_svg"] = legend_color_svg;
+                data_package["colorLegend"] = colorLegend;
+
+            }
+            
+
+           
             this.renderLegend(data_package);
         }else{
             console.log("Not Enable projection view legends...")
@@ -1707,6 +1823,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         let layoutMode = this.props.layoutMode;
         d3.select("#ScatterPlot_sub_"+this.props.id).remove();
         d3.select("#ScatterPlot_Legend_sub_"+this.props.id).remove();
+        d3.select("#ScatterPlot_sub_colorlegend"+this.props.id).remove();
         if(point_array.length <= 0){
             return;
         }
