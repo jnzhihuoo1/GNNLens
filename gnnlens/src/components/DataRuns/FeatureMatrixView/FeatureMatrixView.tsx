@@ -442,7 +442,6 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
         showSource:boolean, enableSorting:boolean, width:number, height:number, extendedMode:any, additional_params:any, selected_models_list:any){
         let max_col_num_block = additional_params["max_col_num_block"];
         let node_start_index = additional_params["node_start_index"];
-        
         // axis_select : 2, Y Axis
         // distance_select: 1, Detailed Feature
         // dataSource_select : 1, Input Layer
@@ -804,19 +803,48 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
             selectedNodeColor.push(color);
         }
         let data_type = common.data_type_id;
+
         if(data_type === 2){
             let graph_info = common.graph_additional_info;
             let selectedFeatureLabel:any = [];
-            
+
             if(Object.keys(graph_info).indexOf("idx_to_attr")>=0 && dataSource_select === 1){
                 let idx_to_attr = graph_info.idx_to_attr;
                 for(let i=0;i<selectedFeature.length; i++){
                     selectedFeatureLabel.push(idx_to_attr[selectedFeature[i]]);
                 }
+
             }else{
                 selectedFeatureLabel = selectedFeature;
+
             }
-            
+            let y_axis_info = [];
+
+            if(Object.keys(graph_info).indexOf("idx_to_node_title")>=0){
+                let idx_to_node_title = graph_info.idx_to_node_title;
+                for(let i = 0; i<selectedNodeIdList.length; i++){
+                    let node_title = idx_to_node_title[selectedNodeIdList[i]];
+                    y_axis_info.push(""+selectedNodeIdList[i]+": "+node_title);
+                }
+                if(showSource){
+                    for(let i = 0; i<indentedList.length; i++){
+                        let id = indentedList[i]["id"];
+                        let node_title = idx_to_node_title[id];
+                        indentedList[i]["node_title"] = ""+id+": "+node_title;
+                    }
+                }
+                
+                console.log("y_axis_info: ", y_axis_info)
+            }else{
+                y_axis_info = selectedNodeIdList;
+                if(showSource){
+                    for(let i = 0; i<indentedList.length; i++){
+                        let id = indentedList[i]["id"];
+                        indentedList[i]["node_title"] = ""+id;
+                    }
+                }
+            }
+
             // Graph Json ------------------------------------------------------------
             let type : any;
             if(dataSource_select === 1){
@@ -862,6 +890,7 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
                 "matrix":matrix,
                 "x_axis":x_axis_data,
                 "y_axis":y_axis_data,
+                "y_axis_info":y_axis_info,
                 "distance_select": distance_select,
                 "type" : type,
                 "color_info": color_info,
@@ -912,6 +941,7 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
     }
     public render() {
         let {graph_object, specificNodeIdList} = this.props;
+
         let common;
         if(getLayoutMode()===3){
             common = graph_object.common;
@@ -936,10 +966,12 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
             "max_col_num_block":max_col_num_block,
             "node_start_index":this.state.node_start_index
         }
+
         let feature_matrix_json = this.constructFeatureMatrixJson(graph_object, specificNodeIdList,
              this.state.axis_select, this.state.distance_select, this.state.dataSource_select, this.state.color_encode,
             this.props.select_inspect_node, this.props.showSource, this.state.enableSorting, this.props.width, this.props.height, 
             this.props.extendedMode, additional_params, this.props.selected_models_list);
+
         if(explanation_type == "MessagePassing" && feature_matrix_json["success"]){
             let FeatureMatrixHeight = 180 + feature_matrix_json.y_axis.length * indentedtreeBarHeight + 20;
 

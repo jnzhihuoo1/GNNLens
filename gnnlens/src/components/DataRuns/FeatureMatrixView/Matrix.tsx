@@ -77,6 +77,7 @@ export default class Matrix extends React.Component<IProps, IState>{
         let margin = { top: 0, right: 30, bottom: 100, left: 0 },
           width = layout_config.width - margin.left - margin.right,
           y_axis = feature_matrix_json["y_axis"], // y_axis_name
+          y_axis_info = feature_matrix_json["y_axis_info"],
           x_axis = feature_matrix_json["x_axis"], // x_axis_name
           data = feature_matrix_json["matrix"],
           type = feature_matrix_json["type"],
@@ -85,6 +86,7 @@ export default class Matrix extends React.Component<IProps, IState>{
           pieName = feature_matrix_json["pieName"];
         let models_length = pieName.length;
         let matrixFilters = this.props.MatrixFilters;
+      console.log("renderD3", y_axis_info)
       let matrixRowFilters = this.props.MatrixRowFilters;
       function transformDataTwoFilters(data:any, indexFilters:any, rowFilters:any){
         let newData:any = [];
@@ -151,6 +153,8 @@ export default class Matrix extends React.Component<IProps, IState>{
             x_axis = x_axis.slice(matrixFilters["index"][0], matrixFilters["index"][1]);
             y_axis = transformYaxis(matrixRowFilters["row_index"], y_axis);
             y_axis_color = transformYaxis(matrixRowFilters["row_index"], y_axis_color);
+            y_axis_info = transformYaxis(matrixRowFilters["row_index"], y_axis_info);
+            console.log("Filtered y axis info", y_axis_info)
             data = transformDataTwoFilters(data, matrixFilters["index"], matrixRowFilters["row_index"]);
           }else{
             x_axis = x_axis.slice(matrixFilters["index"][0], matrixFilters["index"][1]);
@@ -224,7 +228,12 @@ export default class Matrix extends React.Component<IProps, IState>{
       let transform_y = radius*2;
       let y_axis_label_enter = y_axis_labels.enter().append("g").attr("class", "y_axisLabel");
 
-          y_axis_label_enter.merge(y_axis_labels).attr("transform",(d:any, i:any) => "translate("+transform_x+"," + (i * gridSize + transform_y) + ")");
+          y_axis_label_enter.merge(y_axis_labels)
+          .attr("transform",(d:any, i:any) => "translate("+transform_x+"," + (i * gridSize + transform_y) + ")")
+          .on("mouseover", function(d:any,i:any){return tooltip_nodetitle.style("visibility", "visible").text(y_axis_info[i]);})
+            .on("mousemove", function(d:any,i:any){return tooltip_nodetitle.style("top", (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");})
+            .on("mouseout", function(d:any,i:any){return tooltip_nodetitle.style("visibility", "hidden");});;
+            ;
           y_axis_labels.exit().remove();
       let y_axis_label_color = "#000";
       function getArc(radius:number){
@@ -345,6 +354,9 @@ export default class Matrix extends React.Component<IProps, IState>{
       
       let x_axis_label_enter = x_axis_label.enter().append("g").attr("class","x_axisLabel");
         x_axis_label_enter.merge(x_axis_label).attr("transform",(d:any, i:any) => "translate(" + i * gridSize + ",0)")
+        .on("mouseover", function(d:any){return tooltip.style("visibility", "visible").text(d);})
+          .on("mousemove", function(d:any){return tooltip.style("top", (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");})
+          .on("mouseout", function(d:any){return tooltip.style("visibility", "hidden");});
         x_axis_label.exit().remove();
       let x_axis_label_color = "#000";
       /*
@@ -454,6 +466,13 @@ export default class Matrix extends React.Component<IProps, IState>{
       
       var tooltip = d3.select("body")
                   .select("#tooltip_matrix")
+                  .style("position", "absolute")
+                  .style("z-index", "10")
+                  .style("visibility", "hidden")
+                  //.style("background","lightsteelblue"	)
+                  .text("a simple tooltip");
+      var tooltip_nodetitle = d3.select("body")
+                  .select("#tooltip_node_title")
                   .style("position", "absolute")
                   .style("z-index", "10")
                   .style("visibility", "hidden")

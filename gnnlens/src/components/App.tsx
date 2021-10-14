@@ -80,6 +80,7 @@ class App extends React.Component<IProps, IState> {
               </div>
               <div id="tooltip_proj" />
               <div id="tooltip_matrix" />
+              <div id="tooltip_node_title" />
           </Content>
       </Layout>
     );

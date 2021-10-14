@@ -954,6 +954,10 @@ function transform_graphlayout(graph_layout:any[], width:number, height:number){
         return new_graph_layout;
     }
 }
+function skew_weight(weight:any, range_min:any=0.1, range_max:any=1){
+    // Assume weight is [0,1]
+    return (weight - 0) * 0.9 + range_min;
+}
 function getLayoutMode(){
     // 1 ---> Graph View In Center
     // 2 ---> Parallel Coordinates in Row
@@ -969,4 +973,5 @@ export { RED,YELLOW, EChartsColor, getInfectionNodeColor,
      getLabelDistribution, getLabelDistribution2, getSimilarityFeatureSet,
       getShortestPathDistanceSet, constructMetaInformation, constructSelectedMask,
       getNodeColorInfo, constructDegreeRangeList, getDegreeCategory, 
-      binningContinuousVariable, getContinuousVariableCategory, getMaxComponent,transform_graphlayout }
+      binningContinuousVariable, getContinuousVariableCategory, getMaxComponent,
+      transform_graphlayout, skew_weight }

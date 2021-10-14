@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Select, Row} from 'antd';
+import { Select, Row, Col} from 'antd';
 import { getDatasetList} from '../../../service/dataService';
 const Option = Select.Option;
 
@@ -60,12 +60,15 @@ export default class ModelSelector extends React.Component<ModelSelectorProps, M
         }
         return (
                 <Row>
+                    <Col span={4}>
                         Models:&nbsp;
+                        </Col>
+                        <Col span={20}>
                         <Select
                             mode="multiple"
                             allowClear
                             placeholder="Select models"
-                            style={{ width: '230px' }}
+                            style={{ width: '100%' }}
                             onChange={this.onModelSelectorChange}
                             disabled={disabledModelsSelector}
                             value={this.props.selected_models_list}
@@ -75,6 +78,7 @@ export default class ModelSelector extends React.Component<ModelSelectorProps, M
                                 <Option value={d.name} key={d.id}>{d.name}</Option>
                             ))}
                         </Select>
+                        </Col>
                 </Row>
             )
         

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Select, Row} from 'antd';
+import { Select, Row, Col} from 'antd';
 import { getDatasetList} from '../../../service/dataService';
 const Option = Select.Option;
 
@@ -45,15 +45,19 @@ export default class DataSelector extends React.Component<DataSelectorProps, Dat
     }
 
     public render() {
-        
+        // 230 px 
         let disabledDatasetSelector = this.props.datasetList.length <= 0;
         return (
                 <Row>
+                    <Col span={4}>
                         Datasets:&nbsp;
+                        </Col>
+                        <Col span={20}>
+
                         <Select
                             placeholder="Select a dataset"
                             value={this.props.dataset_id  || undefined}
-                            style={{ width: '230px' }}
+                            style={{ width: '100%' }}
                             onChange={this.onDatasetSelectorChange}
                             disabled={disabledDatasetSelector}
                         >
@@ -63,6 +67,7 @@ export default class DataSelector extends React.Component<DataSelectorProps, Dat
                                 </Option>
                             ))}
                         </Select>
+                        </Col>
                 </Row>
             )
         

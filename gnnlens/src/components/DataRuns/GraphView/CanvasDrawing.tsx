@@ -91,7 +91,7 @@ function drawLine(context:any, color:any, x1:any, y1:any, x2:any, y2:any, linewi
     drawCircle(context, colorlist[0], inner_radius, x, y);
 }*/
 function drawNodeGlyph(context:any, colorlist:any, inner_radius:any, radius:any, outer_radius:any, x:any, y:any, 
-    enableStroke:boolean=false, outer_arc_encoded_value:any=1, outer_arc_radius:any=2, enable_alpha_mode=true){
+    enableStroke:boolean=false, outer_arc_encoded_value:any=1,enable_alpha_mode=true){
     let value = outer_arc_encoded_value;
     //let original_globalAlpha = context.globalAlpha;
     if(value<0) value = 0;

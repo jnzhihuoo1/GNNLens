@@ -5,7 +5,8 @@ import * as React from "react";
 
 import { Select, Button,  Tag, InputNumber } from 'antd';
 import {getCoraNodeColor, 
-    constructNeighborSet,getTrainColor, getNodeStatisticStr, transform_graphlayout} from '../../../helper';
+    constructNeighborSet,getTrainColor, getNodeStatisticStr, 
+    transform_graphlayout, skew_weight} from '../../../helper';
 import { SettingOutlined } from '@ant-design/icons';
 import GraphViewSettingsModalContainer from '../../../container/GraphViewSettingsModalContainer';
 import ForceDirectedGraphCanvasContainer from '../../../container/ForceDirectedGraphCanvasContainer';
@@ -108,19 +109,36 @@ export default class GraphView extends React.Component<IProps, IState>{
      }
      public constructGraphJson(graph_object:any, show_mode:number, explained_node:number, 
          selectedNodeIdList:any, enableForceDirected:boolean, 
-        select_inspect_node:number, showSource:boolean, width:number, height:number, selected_models_list:any){
-        let selectStr = selectedNodeIdList.join("_");
+        select_inspect_node:number, showSource:boolean, width:number, height:number, selected_models_list:any, subgraph_index:number){
+        
+        
+        
+        
         let selectedmodelsStr = selected_models_list.join("_");
         //let {width, height} = this.props;
-
         let common = graph_object.common;
         let individual = graph_object.individual;
+        let subgraphs = graph_object.subgraphs;
+        let sp_subgraphs;
+        let subgraph_list = graph_object.subgraph_list;
+        let subgraph_name = "";
+        let subgraph_mode = false;
+        if(subgraph_index >= 0){
+            subgraph_name = subgraph_list[subgraph_index];
+            if(Object.keys(subgraphs[subgraph_name]["node_subgraphs"]).indexOf(""+select_inspect_node)>=0){
+                sp_subgraphs = subgraphs[subgraph_name]["node_subgraphs"][select_inspect_node];
+                selectedNodeIdList = sp_subgraphs["nodes"];
+                subgraph_mode = true;
+            }
+        }else{
+            subgraph_mode = false;
+        }
+        console.log("subgraph_mode", subgraph_mode);
+        let selectStr = selectedNodeIdList.join("_");
         let graph_name = common.name+"_"+common.dataset_id+"_"+(show_mode)+"_"+
-        common.data_type_id+"_SELECTED_"+selectStr+"_SELECTEDEND_"+enableForceDirected+"_"+width+"_"+height+"_SELECTMODEL_"+selectedmodelsStr+"_SELECTMODELEND_";
-    
-    
+        common.data_type_id+"_SELECTED_"+selectStr+"_SELECTEDEND_"+enableForceDirected+"_"+width+"_"+height+"_SELECTMODEL_"+selectedmodelsStr+"_SELECTMODELEND_"
+        +subgraph_index;
 
-        
         if(show_mode == 4){
             graph_name = graph_name+"_"+explained_node;
         }
@@ -129,32 +147,14 @@ export default class GraphView extends React.Component<IProps, IState>{
         let graph_layout = common.graph_layout;
         let mask = common.mask;
         let train_mask_set = new Set(mask.train);
-        let graph_out ;
-
-        /*graph_out = {
-            "GCN": individual["GCN"]["graph_out"],
-            "MLP": individual["MLP"]["graph_out"],
-            "GCN_Identity_features": individual["GCN_Identity_features"]["graph_out"]
-        }*/
-
         if(selectedNodeIdList.length === 0){
             selectedNodeIdList = []
             for(let i = 0; i<graph_layout.length;i++){
                 selectedNodeIdList.push(i);
             }
-
-            
         }
         let new_graph_layout;// = graph_layout;
-
-        
         new_graph_layout = graph_layout;
-       
-        
-        
-
-        
-
         let enable_forceDirected = enableForceDirected;
         if(new_graph_layout.length > 0){
             new_graph_layout = transform_graphlayout(new_graph_layout, width, height);
@@ -186,6 +186,7 @@ export default class GraphView extends React.Component<IProps, IState>{
                 let index = i;
                 let real_color:any;
                 let highlight = 1;
+                let node_weight = 1;
                 let ground_truth_label = graph_target.node_features[index];
                 label = ground_truth_label;
                 let color:any = [getCoraNodeColor(ground_truth_label, 2)];
@@ -195,8 +196,12 @@ export default class GraphView extends React.Component<IProps, IState>{
                 }
                 color.push(getTrainColor(index, train_mask_set));
                 real_color = color.slice();
-                if(selectedNodeIdList.indexOf(index)>=0){
-            
+                let subnode_index = selectedNodeIdList.indexOf(index);
+                if(subnode_index>=0){
+                    if(subgraph_mode){
+                        node_weight = sp_subgraphs["nweight"][subnode_index];
+                        console.log("node_weight", node_weight)
+                    }
                 }else{
                     color = ["#ddd","#ddd","#ddd","#ddd","#ddd"];
                     highlight = 0;
@@ -212,7 +217,8 @@ export default class GraphView extends React.Component<IProps, IState>{
                     "color":color,
                     "real_color":real_color,
                     "radius":radius,
-                    "highlight":highlight
+                    "highlight":highlight,
+                    "node_weight":skew_weight(node_weight)
                 }
                 
                 if(enablePrevGraphLayout){
@@ -226,11 +232,24 @@ export default class GraphView extends React.Component<IProps, IState>{
             }
             for(let i = 0; i<edge_num;i++){
                 let link_color = "#eee";
-                if(selectedNodeIdList.indexOf(source_list[i])>=0){
-                    if(selectedNodeIdList.indexOf(target_list[i])>=0){
+                let eweight = 0.1;
+
+                if(!subgraph_mode){
+                    if(selectedNodeIdList.indexOf(source_list[i])>=0){
+                        if(selectedNodeIdList.indexOf(target_list[i])>=0){
+                            link_color = "#bbb";
+                        }
+                    }
+                }else{
+                    let selectedEdgeIdList = sp_subgraphs["eids"];
+                    let ceid = selectedEdgeIdList.indexOf(i);
+                    if(ceid>=0){
                         link_color = "#bbb";
+                        eweight = sp_subgraphs["eweight"][ceid] * 0.6;
                     }
                 }
+
+                
                 if(links_color_json.indexOf(link_color)>=0){
                     
                 }else{
@@ -242,7 +261,8 @@ export default class GraphView extends React.Component<IProps, IState>{
                     "target": target_list[i],
                     "value":1,
                     "color":link_color,
-                    "real_color":"#bbb"
+                    "real_color":"#bbb",
+                    "weight":skew_weight(eweight)
                 })
                 
             }
@@ -291,9 +311,6 @@ export default class GraphView extends React.Component<IProps, IState>{
             console.log("Unknown data type : ", data_type )
             return {"success":false}; 
         }
-
-
-        
     }
     public onEnableForceDirected(checked:boolean){
         this.setState({
@@ -345,29 +362,39 @@ export default class GraphView extends React.Component<IProps, IState>{
 
         let onNodeClick = this.onNodeClick;
         let specificNodeIdList = selectedNodeIdList;
-        if(showSource){
-            specificNodeIdList = [select_inspect_node];
-        }
+       
 
         let common = graph_object.common;
-
+        let subgraph_list = graph_object.subgraph_list;
         // One Hop
         let graph_in = common.graph_in;
         let NeighborSet = constructNeighborSet(graph_in);
+        
+        let ForceDirectedWidth = width - 10;
+        let ForceDirectedHeight = height - 50;
+        let subgraph_index = -1;
+
+        if(showSource){
+            specificNodeIdList = [select_inspect_node];
+        }
         if(extendedMode === 2){
             specificNodeIdList = this.constructExtendedSelectedNodeIdList(specificNodeIdList, NeighborSet);
         }else if(extendedMode === 3){
             specificNodeIdList = this.constructExtendedSelectedNodeIdList(specificNodeIdList, NeighborSet);
             specificNodeIdList = this.constructExtendedSelectedNodeIdList(specificNodeIdList, NeighborSet);
         }
+        else if(extendedMode >= 4){
+            subgraph_index = extendedMode - 4;
+            if(subgraph_index >= subgraph_list.length){
+                console.log("Not found the subgraph.");
+                subgraph_index = -1;
+            }
+        }
         this.props.changeSpecificNodeIdList(specificNodeIdList);
 
-
-        let ForceDirectedWidth = width - 10;
-        let ForceDirectedHeight = height - 50;
         let graph_json:any = this.constructGraphJson(graph_object, show_mode, explained_node, 
             specificNodeIdList, this.state.enableForceDirected, 
-            select_inspect_node,showSource,  ForceDirectedWidth, ForceDirectedHeight, selected_models_list);
+            select_inspect_node,showSource,  ForceDirectedWidth, ForceDirectedHeight, selected_models_list, subgraph_index);
 
         graph_json["NeighborSet"] = NeighborSet;
         if(graph_json["success"]){
@@ -377,11 +404,33 @@ export default class GraphView extends React.Component<IProps, IState>{
             
         if(graph_json["success"]){
             let nodenum: number = graph_json["nodenum"];
-            let extendedOptions = [
+            let extendedOptions:any = [
                 [1,"None"],
                 [2,"One Hop"],
                 [3,"Two Hop"]];
-
+            if(showSource){
+                let subgraphs = graph_object.subgraphs;
+                let found_extendedOptions = false;
+                if(extendedMode <= 3){
+                    found_extendedOptions = true;
+                }
+                for (var subg_type_id = 0; subg_type_id < subgraph_list.length; subg_type_id++) {
+                    let subgraph_name = subgraph_list[subg_type_id];
+                    if(Object.keys(subgraphs[subgraph_name]["node_subgraphs"]).indexOf(""+select_inspect_node)>=0){
+                        let sp_subgraphs = subgraphs[subgraph_name]["node_subgraphs"][select_inspect_node];
+                        if(sp_subgraphs["nodes"].length > 0){
+                            extendedOptions.push([subg_type_id + 4, subgraph_list[subg_type_id]]);
+                            if(extendedMode == subg_type_id + 4){
+                                found_extendedOptions = true;
+                            }
+                        }
+                    }
+                }
+                if(!found_extendedOptions){
+                    this.props.changeExtendedMode(3);
+                }
+            }
+            
 
             let stopLayout = () =>{
                 this.onEnableForceDirected(false);

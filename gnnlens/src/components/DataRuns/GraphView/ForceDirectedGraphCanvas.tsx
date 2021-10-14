@@ -250,7 +250,7 @@ export default class ForceDirectedGraphCanvas extends React.Component<IProps, IS
         // ---------------- Color Legend -------------------------//
          let legend_color_x = 10;
 
-        // Calculate the legend color width and height.
+        // ---- Calculate the legend color width and height.
          let max_text_length = 0;
          colorLegend.forEach((d:any)=>{
              let text = "" + d.text;
@@ -794,7 +794,7 @@ export default class ForceDirectedGraphCanvas extends React.Component<IProps, IS
                         return true;
                     }
                 }).forEach(function(d:any) {
-                    drawLine(context, d.color, d.source.x, d.source.y, d.target.x, d.target.y);
+                    drawLine(context, d.color, d.source.x, d.source.y, d.target.x, d.target.y, null, d.weight);
                 });
         
                 // Draw the nodes
@@ -806,7 +806,9 @@ export default class ForceDirectedGraphCanvas extends React.Component<IProps, IS
                     let node_inner_radius = d.radius - radius_gap;
                     let node_radius = d.radius;
                     let node_outer_radius = d.radius * 2;
-                    drawNodeGlyph(context, d.color, node_inner_radius, node_radius, node_outer_radius, d.x, d.y);
+                    let node_outer_arc_encoded_value = d.node_weight;
+                    drawNodeGlyph(context, d.color, node_inner_radius, node_radius, 
+                        node_outer_radius, d.x, d.y, false, node_outer_arc_encoded_value, true);
                 });
             }
             
@@ -818,7 +820,7 @@ export default class ForceDirectedGraphCanvas extends React.Component<IProps, IS
                     return false;
                 }
             }).forEach(function(d:any) {
-                drawLine(context, d.color, d.source.x, d.source.y, d.target.x, d.target.y);
+                drawLine(context, d.color, d.source.x, d.source.y, d.target.x, d.target.y, 5 * d.weight, d.weight);
             });
             tempData.nodes.filter((d:any)=>{
                 return d["highlight"];
@@ -827,7 +829,9 @@ export default class ForceDirectedGraphCanvas extends React.Component<IProps, IS
                 let node_inner_radius = d.radius - radius_gap;
                 let node_radius = d.radius;
                 let node_outer_radius = d.radius * 2;
-                drawNodeGlyph(context, d.color, node_inner_radius, node_radius, node_outer_radius, d.x, d.y);
+                let node_outer_arc_encoded_value = d.node_weight;
+                drawNodeGlyph(context, d.color, node_inner_radius, node_radius, 
+                    node_outer_radius, d.x, d.y, false, node_outer_arc_encoded_value, true);
 
             })
         }
@@ -903,7 +907,7 @@ export default class ForceDirectedGraphCanvas extends React.Component<IProps, IS
                     return false;
                 }
             }).forEach(function(d:any) {
-                drawLine(middle_context, d.real_color, d.source.x, d.source.y, d.target.x, d.target.y);
+                drawLine(middle_context, d.real_color, d.source.x, d.source.y, d.target.x, d.target.y, null, d.weight);
             });
             // Draw the hovered nodes
             tempData.nodes.filter((d:any)=>{
@@ -912,7 +916,10 @@ export default class ForceDirectedGraphCanvas extends React.Component<IProps, IS
                 let node_inner_radius = d.radius - radius_gap;
                 let node_radius = d.radius;
                 let node_outer_radius = d.radius * 2;
-                drawNodeGlyph(middle_context, d.real_color, node_inner_radius*d.hover_cons, node_radius*d.hover_cons, node_outer_radius*d.hover_cons, d.x, d.y, true);
+                let node_outer_arc_encoded_value = d.node_weight;
+                drawNodeGlyph(middle_context, d.real_color, node_inner_radius*d.hover_cons, 
+                    node_radius*d.hover_cons, node_outer_radius*d.hover_cons, d.x, d.y, true,
+                    node_outer_arc_encoded_value, false);
             });
             middle_context.restore();
         }

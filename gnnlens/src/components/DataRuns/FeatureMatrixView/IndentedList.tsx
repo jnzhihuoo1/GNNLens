@@ -104,7 +104,8 @@ export default class IndentedTree extends React.Component<IProps, IState>{
       const y_axis_labels = svg.selectAll(".y_axisLabel")
                             .data(fdata,function(d:any){
                               return d.id;
-                            });
+                            })
+            ;
       let gridSize=barHeight;
       let radius = Math.min(5,gridSize/4);
       let radius_gap = 0.3;
@@ -116,7 +117,11 @@ export default class IndentedTree extends React.Component<IProps, IState>{
       y_axis_label_enter.merge(y_axis_labels).attr("transform",(d:any, i:any) => {
         let new_x = transform_x + d.level*deviation_x;
         return "translate("+new_x+"," + (i * gridSize + transform_y) + ")"
-      });
+      })
+      .on("mouseover", function(d:any,i:any){return tooltip_nodetitle.style("visibility", "visible").text(d.node_title);})
+            .on("mousemove", function(d:any,i:any){return tooltip_nodetitle.style("top", (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");})
+            .on("mouseout", function(d:any,i:any){return tooltip_nodetitle.style("visibility", "hidden");});;
+            ;
       y_axis_labels.exit().remove();
       let y_axis_label_color = "#000";
       function getArc(radius:number){
@@ -198,7 +203,13 @@ export default class IndentedTree extends React.Component<IProps, IState>{
             .style("dominant-baseline","central")
             .attr("transform", "translate("+transform_x+"," + 0 + ")")
             .attr("class", "y-axis");
-
+            var tooltip_nodetitle = d3.select("body")
+            .select("#tooltip_node_title")
+            .style("position", "absolute")
+            .style("z-index", "10")
+            .style("visibility", "hidden")
+            //.style("background","lightsteelblue"	)
+            .text("a simple tooltip");
     }
     public render() {
         return (
