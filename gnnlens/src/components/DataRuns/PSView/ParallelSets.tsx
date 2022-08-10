@@ -107,6 +107,7 @@ export default class ParallelCoordinates extends React.Component<IProps, IState>
         this.props.changeFilters({});
     }
     public renderD3(){
+        console.log("Parallel Sets props", this.props);
         // Parallel Sets
         let {width, height,PSJson,PSDimensions} = this.props;
         let PSData = PSJson.PSData;

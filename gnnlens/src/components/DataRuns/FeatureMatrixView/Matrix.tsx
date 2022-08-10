@@ -79,6 +79,7 @@ export default class Matrix extends React.Component<IProps, IState>{
           y_axis = feature_matrix_json["y_axis"], // y_axis_name
           y_axis_info = feature_matrix_json["y_axis_info"],
           x_axis = feature_matrix_json["x_axis"], // x_axis_name
+          selectedFeatureTitle = feature_matrix_json["selectedFeatureTitle"],
           data = feature_matrix_json["matrix"],
           type = feature_matrix_json["type"],
           color_info = feature_matrix_json["color_info"],
@@ -151,6 +152,7 @@ export default class Matrix extends React.Component<IProps, IState>{
           let y_axis_color = color_info["y_axis_color"];
           if(matrixRowFilters.hasOwnProperty("row_index")&&showSource){
             x_axis = x_axis.slice(matrixFilters["index"][0], matrixFilters["index"][1]);
+            selectedFeatureTitle = selectedFeatureTitle.slice(matrixFilters["index"][0], matrixFilters["index"][1]);
             y_axis = transformYaxis(matrixRowFilters["row_index"], y_axis);
             y_axis_color = transformYaxis(matrixRowFilters["row_index"], y_axis_color);
             y_axis_info = transformYaxis(matrixRowFilters["row_index"], y_axis_info);
@@ -158,6 +160,8 @@ export default class Matrix extends React.Component<IProps, IState>{
             data = transformDataTwoFilters(data, matrixFilters["index"], matrixRowFilters["row_index"]);
           }else{
             x_axis = x_axis.slice(matrixFilters["index"][0], matrixFilters["index"][1]);
+            selectedFeatureTitle = selectedFeatureTitle.slice(matrixFilters["index"][0], matrixFilters["index"][1]);
+
             data = transformDataOneFilter(data, matrixFilters["index"]);
           }
           
@@ -354,7 +358,7 @@ export default class Matrix extends React.Component<IProps, IState>{
       
       let x_axis_label_enter = x_axis_label.enter().append("g").attr("class","x_axisLabel");
         x_axis_label_enter.merge(x_axis_label).attr("transform",(d:any, i:any) => "translate(" + i * gridSize + ",0)")
-        .on("mouseover", function(d:any){return tooltip.style("visibility", "visible").text(d);})
+        .on("mouseover", function(d:any,i:any){return tooltip.style("visibility", "visible").text(selectedFeatureTitle[i]);})
           .on("mousemove", function(d:any){return tooltip.style("top", (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");})
           .on("mouseout", function(d:any){return tooltip.style("visibility", "hidden");});
         x_axis_label.exit().remove();

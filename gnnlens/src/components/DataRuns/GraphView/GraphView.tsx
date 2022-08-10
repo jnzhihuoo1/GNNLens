@@ -184,6 +184,7 @@ export default class GraphView extends React.Component<IProps, IState>{
             for(let i = 0; i<node_num;i++){
                 let label ;
                 let index = i;
+                let title = "" + index;
                 let real_color:any;
                 let highlight = 1;
                 let node_weight = 1;
@@ -200,7 +201,8 @@ export default class GraphView extends React.Component<IProps, IState>{
                 if(subnode_index>=0){
                     if(subgraph_mode){
                         node_weight = sp_subgraphs["nweight"][subnode_index];
-                        console.log("node_weight", node_weight)
+                        title = title + ": " + node_weight.toFixed(4);
+                        //console.log("node_weight", node_weight)
                     }
                 }else{
                     color = ["#ddd","#ddd","#ddd","#ddd","#ddd"];
@@ -218,7 +220,8 @@ export default class GraphView extends React.Component<IProps, IState>{
                     "real_color":real_color,
                     "radius":radius,
                     "highlight":highlight,
-                    "node_weight":skew_weight(node_weight)
+                    "node_weight":skew_weight(node_weight, 0, 1),
+                    "title":title
                 }
                 
                 if(enablePrevGraphLayout){
@@ -245,7 +248,8 @@ export default class GraphView extends React.Component<IProps, IState>{
                     let ceid = selectedEdgeIdList.indexOf(i);
                     if(ceid>=0){
                         link_color = "#bbb";
-                        eweight = sp_subgraphs["eweight"][ceid] * 0.6;
+                        //eweight = sp_subgraphs["eweight"][ceid] * 0.6;
+                        eweight = 0.1;
                     }
                 }
 
@@ -448,12 +452,12 @@ export default class GraphView extends React.Component<IProps, IState>{
                     <span key={"span"+3}>&nbsp;</span>,
                     <Button size="small" onClick={()=>{this.props.changeShowSource(false);this.props.changeExtendedMode(1);}}>X</Button> ]:[<span key={"span"+2}></span>]}
                     <GraphViewSettingsModalContainer />
-                    &nbsp;&nbsp;&nbsp;&nbsp;
+                    &nbsp;&nbsp;
                     Subgraph:&nbsp;
                     <Select
                         placeholder="Select a subgraph"
                         value={extendedMode}
-                        style={{ width: '90px' }}
+                        style={{ width: '100px' }}
                         onChange={this.onExtendedModeChange}
                         size="small"
                     >
@@ -463,13 +467,13 @@ export default class GraphView extends React.Component<IProps, IState>{
                             </Option>
                         ))}
                         </Select>
-                    &nbsp;&nbsp;&nbsp;&nbsp;
+                    &nbsp;&nbsp;
                     {(this.state.enableForceDirected)?
                         <Button type="primary" size="small" onClick={stopLayout}>Stop Layout</Button>:
                         <Button type="default" size="small" onClick={startLayout}>Start Layout</Button>}
-                    &nbsp;&nbsp;&nbsp;&nbsp;
+                    &nbsp;&nbsp;
                     <Button type="default" size="small" onClick={()=>{this.showGraphViewSettingModal()}} ><SettingOutlined /></Button>
-                    &nbsp;&nbsp;&nbsp;&nbsp;
+                    &nbsp;&nbsp;
                     #Nodes: <Tag>{getNodeStatisticStr(specificNodeIdList.length, nodenum)} </Tag>
                     
                     </div>

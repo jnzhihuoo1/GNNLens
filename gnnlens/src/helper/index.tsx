@@ -289,8 +289,8 @@ function constructPathDict(message_passing:any){
 }
 function getTrainColor(node_id:any, train_set:any){
     if(train_set.has(node_id)){
-        //return "#fff";
-        return "#000";
+        return "#fff";
+        //return "#000";
     }else{
         return "#fff";
     }
@@ -956,7 +956,7 @@ function transform_graphlayout(graph_layout:any[], width:number, height:number){
 }
 function skew_weight(weight:any, range_min:any=0.1, range_max:any=1){
     // Assume weight is [0,1]
-    return (weight - 0) * 0.9 + range_min;
+    return (weight - 0) * (range_max - range_min) + range_min;
 }
 function getLayoutMode(){
     // 1 ---> Graph View In Center

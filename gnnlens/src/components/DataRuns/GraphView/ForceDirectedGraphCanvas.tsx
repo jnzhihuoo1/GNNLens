@@ -513,12 +513,12 @@ export default class ForceDirectedGraphCanvas extends React.Component<IProps, IS
                 if(event_subject==="GraphCanvas"&&selected){
                     updateFlag = true;
                     let target_id = selected.id;
-
+                    let target_title = selected.title;
                     d3.select("#force_directed_graph").select('#tooltip')
                         .style('opacity', 0.8)
                         .style('top', (xy[1] + 5) + 'px')
                         .style('left', (xy[0] + 5) + 'px')
-                        .html(target_id);
+                        .html(target_title);
 
                     let neighbor_id = neighborSet[selected.id];
                     tempData.nodes.forEach((d:any)=>{
