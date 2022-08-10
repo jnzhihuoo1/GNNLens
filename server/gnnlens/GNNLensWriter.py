@@ -33,7 +33,7 @@ class GNNLensWriter():
         """
         return os.path.join(self.logdir, str(self.graph_data[name]["common"]['dataset_id']))
     
-    def add_graph(self, name, graph, nlabels, num_nlabel_types, features, calculate_metrics=True):
+    def add_graph(self, name, graph, nlabels, num_nlabel_types, features, calculate_metrics=True, additional_info={}):
         """Add data for a graph.
 
         Parameters
@@ -97,6 +97,8 @@ class GNNLensWriter():
         graph_additional_info = {
             "num_class" : num_nlabel_types
         }
+        for key in additional_info:
+            graph_additional_info[key] = additional_info[key]
         graph_in = {
             "feature":features_sparse,
             "feature_value":features_sparse_value,
@@ -135,7 +137,12 @@ class GNNLensWriter():
         individual_package = {}
         return_package = {
             "common": common_package,
-            "individual": individual_package
+            "individual": individual_package,
+            "individual_model_names":[],
+            "subgraph_list": [],
+            'subgraphs': {},
+            "feature_ranking_list":[],
+            "feature_ranking":{}
         }
         # Register graph name
         self.graph_names.append(name)
@@ -181,7 +188,7 @@ class GNNLensWriter():
         self.graph_data[name]["common"]["graph_layout"] = newPos
         print("Finish calculating metrics for {}.".format(name))
         
-    def add_model(self, graph_name, model_name, nlabels, output_vector, model_key):
+    def add_model(self, graph_name, model_name, nlabels, output_vector):
         ## model_key 0 is main model.
         ## model_key 1 is main model without structure.
         ## model_key 2 is main model without features.
@@ -203,8 +210,8 @@ class GNNLensWriter():
         """
         assert graph_name in self.graph_names, \
             'Expect add_graph to be called first for graph {}'.format(graph_name)
-
-        
+        if model_name in self.graph_data[graph_name]["individual_model_names"]:
+            raise ValueError('Model name {} has already been used.'.format(model_name))
         # Handle nlabels
         nlabels = F2.asnumpy(nlabels)
         num_nodes = self.graph_data[graph_name]["common"]["graph_in"]['node_num']
@@ -216,10 +223,12 @@ class GNNLensWriter():
 
         
         # Dump model data file
-        num_models = len(self.graph_data[graph_name]['individual']) + 1
-        individual_models_keys = ["GCN", "MLP", "GCN_Identity_features"]
-        if model_key<0 or model_key >= len(individual_models_keys):
-            raise DGLError('model_key should be 0, 1, or 2.')
+        num_models = len(self.graph_data[graph_name]['individual_model_names'])
+        
+        
+        #individual_models_keys = ["GCN", "MLP", "GCN_Identity_features"]
+        #if model_key<0 or model_key >= len(individual_models_keys):
+        #    raise DGLError('model_key should be 0, 1, or 2.')
         output_vector = F2.asnumpy(output_vector)
         output_vector = output_vector.tolist()
         graph_out = {
@@ -227,10 +236,11 @@ class GNNLensWriter():
             "output_vector": output_vector
         }
         local_individual_package = {
-            "model": num_models,
+            "id": num_models,
             "graph_out":graph_out,
-            "real_model_name": model_name
+            "model_name": model_name
         }
+        '''
         if model_key == 0:
             graph_metrics_data = self.graph_metrics_data[graph_name]
             graph_in = graph_metrics_data["graph_in"]
@@ -240,10 +250,130 @@ class GNNLensWriter():
                 "values": [1 for i in range(len(graph_in["senders"]))]
             }
             local_individual_package["message_passing"] = message_passing
-        model_key_name = individual_models_keys[model_key]
+        '''
+        # model_key_name = individual_models_keys[model_key]
         # Register the model
-        self.graph_data[graph_name]["individual"][model_key_name] = local_individual_package
+        self.graph_data[graph_name]["individual_model_names"].append(model_name)
+        self.graph_data[graph_name]["individual"][model_name] = local_individual_package
+        
+    def add_subgraph(self, graph_name, subgraph_name, node_id, subgraph_nids, subgraph_eids, 
+                     subgraph_nweights=None, subgraph_eweights=None):
+        """Add data for a subgraph associated with a node
+        
+        Parameters
+        ----------
+        graph_name : str
+            Name of the graph.
+        subgraph_name : str
+            Name of the subgraph group.
+        node_id : int
+            The node id with which the subgraph is associated. For one subgraph group,
+            a node can only be associated with a single subgraph.
+        subgraph_nids : Tensor of integers
+            Ids of the nodes in the subgraph. The tensor is of shape (N,), where N is
+            the number of nodes in the subgraph.
+        subgraph_eids : Tensor of integers
+            Ids of the edges in the subgraph. The tensor is of shape (E,), where E is
+            the number of edges in the subgraph.
+        subgraph_nweights : Tensor of floats, optional
+            Weights of the nodes in the subgraph, corresponding to subgraph_nids. The
+            tensor can be reshaped as (N,), where N is the number of nodes in the
+            subgraph. The weights should be in range [0, 1].
+        subgraph_eweights : Tensor of floats, optional
+            Weights of the edges in the subgraph, corresponding to subgraph_eids. The
+            tensor can be reshaped as (E,), where E is the number of edges in the
+            subgraph. The weights should be in range [0, 1].
+        """
+        assert graph_name in self.graph_names, \
+            'Expect add_graph to be called first for graph {}'.format(graph_name)
+        
+        # Register the subgraph
+        if subgraph_name not in self.graph_data[graph_name]['subgraph_list']:
+            self.graph_data[graph_name]['subgraph_list'].append(subgraph_name)
+            self.graph_data[graph_name]['subgraphs'][subgraph_name] = {
+                "name": subgraph_name,
+                "success": True,
+                "node_subgraphs": dict()
+            }
+            '''
+            num_nodes = self.graph_data[graph_name]['num_nodes']
+            for i in range(num_nodes):
+                self.graph_data[graph_name]['subgraphs'][subgraph_name]["node_subgraphs"][i] = {
+                    "nodes": [],
+                    "nweight": [],
+                    "eids": [],
+                    "eweight": []
+                }
+                '''
+        
+        # GNNVis assumes the node and edge IDs to be sorted
+        subgraph_nids = F2.asnumpy(subgraph_nids)
+        nid_order = np.argsort(subgraph_nids)
+        subgraph_nids = subgraph_nids[nid_order]
+        
+        subgraph_eids = F2.asnumpy(subgraph_eids)
+        eid_order = np.argsort(subgraph_eids)
+        subgraph_eids = subgraph_eids[eid_order]
+        
+        # Handle nweights
+        if subgraph_nweights is None:
+            subgraph_nweights = np.ones(len(subgraph_nids))
+        else:
+            subgraph_nweights = F2.asnumpy(subgraph_nweights)
+            subgraph_nweights = np.reshape(subgraph_nweights, (len(subgraph_nids),))
+            subgraph_nweights = subgraph_nweights[nid_order]
 
+        # Handle eweights
+        if subgraph_eweights is None:
+            subgraph_eweights = np.ones(len(subgraph_eids))
+        else:
+            subgraph_eweights = F2.asnumpy(subgraph_eweights)
+            subgraph_eweights = np.reshape(subgraph_eweights, (len(subgraph_eids),))
+            subgraph_eweights = subgraph_eweights[eid_order]
+        
+        self.graph_data[graph_name]['subgraphs'][subgraph_name]["node_subgraphs"][node_id] = {
+            "nodes": subgraph_nids.tolist(),
+            "nweight": subgraph_nweights.tolist(),
+            "eids": subgraph_eids.tolist(),
+            "eweight": subgraph_eweights.tolist()
+        }
+    def add_feature_ranking(self, graph_name, feature_ranking_name, node_id, feature_ranking_values):
+        """Add data for a feature ranking associated with a node
+        
+        Parameters
+        ----------
+        graph_name : str
+            Name of the graph.
+        feature_ranking_name : str
+            Name of the feature ranking.
+        node_id : int
+            The node id with which the subgraph is associated. For one subgraph group,
+            a node can only be associated with a single subgraph.
+        feature_ranking_values : Tensor of float
+            The feature ranking values. It will automatically extract the ranking values for that node only.
+        """
+        assert graph_name in self.graph_names, \
+            'Expect add_graph to be called first for graph {}'.format(graph_name)
+        
+        # Register the subgraph
+        if feature_ranking_name not in self.graph_data[graph_name]['feature_ranking_list']:
+            self.graph_data[graph_name]['feature_ranking_list'].append(feature_ranking_name)
+            self.graph_data[graph_name]['feature_ranking'][feature_ranking_name] = {
+                "name": feature_ranking_name,
+                "success": True,
+                "feature_rank_values": dict()
+            }
+        
+        # GNNLens assumes the node and edge IDs to be sorted
+        feature_ranking_values = F2.asnumpy(feature_ranking_values).tolist()
+        feature_sparse_list = self.graph_data[graph_name]["common"]["graph_in"]["feature"]
+        assert node_id>=0 and node_id < len(feature_sparse_list), 'Node id: {} is out of range [0,{}).'.format(node_id, len(feature_sparse_list))
+        #assert len(feature_ranking_values) == len(feature_sparse_list), 'the length of feature_ranking_values {} is not equal to {}'.format(len(feature_ranking_values), len(feature_sparse_list))
+        feature = feature_sparse_list[node_id]
+        selected_feature_ranking_values = [feature_ranking_values[idx] for idx in feature]
+        self.graph_data[graph_name]['feature_ranking'][feature_ranking_name]["feature_rank_values"][node_id] = selected_feature_ranking_values
+        
+        
     def flush(self):
         """Finish dumping data."""
         VERSION_ID = self.VERSION_ID
