@@ -1,19 +1,11 @@
 
 import * as React from "react";
-//import Matrix from "./Matrix";
-//import BrushBarChart from "./BrushBarChart";
 import MatrixContainer from '../../../container/MatrixContainer';
 import BrushBarChartContainer from '../../../container/BrushBarChartContainer';
-//import HorizonChartContainer from '../../../container/HorizonChartContainer';
-//import IndentedTreeContainer from '../../../container/IndentedTreeContainer';
 import IndentedListContainer from '../../../container/IndentedListContainer';
-import { Select, Switch, Button } from 'antd';
-import {getCoraNodeColor, getLayoutMode, constructPathDict,getTrainColor,cropAnchorsList} from '../../../helper';
+import { Select, } from 'antd';
+import {getCoraNodeColor, getLayoutMode, getTrainColor,cropAnchorsList} from '../../../helper';
 import VerticalSliderContainer from "../../../container/VerticalSliderContainer";
-import { AnyCnameRecord } from "dns";
-import { select } from "d3";
-const tiny_queue = require("tiny-queue");
-const science = require("science");
 const reorder_module = require("./reorder.v1.js");
 const reorder = reorder_module.default;
 
@@ -48,7 +40,8 @@ export interface IProps {
     select_inspect_node:number,
     showSource : boolean,
     extendedMode: any,
-    K_value:any
+    K_value:any,
+    selected_models_list:any
 
 }
 export interface IState {
@@ -56,7 +49,7 @@ export interface IState {
     distance_select : number,
     dataSource_select: number,
     color_encode: number,
-    enableSorting: boolean,
+    enableSorting: number,
     node_start_index: number
 }
 
@@ -75,7 +68,7 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
             distance_select: 1,
             dataSource_select : 1,
             color_encode: 2,
-            enableSorting: true,
+            enableSorting: 1,
             node_start_index: 0
         }
         //this.resize.bind(this);
@@ -318,18 +311,13 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
         }
         return selectedIndetendedTreeId;
     }
-    public getNodeColorInfoFull(index:number, graph_target:any, individual:any, train_mask_set:any){
+    public getNodeColorInfoFull(index:number, graph_target:any, individual:any, train_mask_set:any, selected_models_list:any){
         let ground_truth_label = graph_target.node_features[index];
-        let GCN_prediction_label = individual.GCN.graph_out.node_features[index];   //
-        let MLP_prediction_label = individual.MLP.graph_out.node_features[index]; 
-        let GCN_Identity_features_prediction_label = individual.GCN_Identity_features.graph_out.node_features[index]; 
-        // Ground Truth Color / Prediction Color
-        let color:any = [getCoraNodeColor(ground_truth_label, 2), 
-            getCoraNodeColor(GCN_prediction_label,3),
-            getCoraNodeColor(MLP_prediction_label,3),
-            getCoraNodeColor(GCN_Identity_features_prediction_label,3),
-            getTrainColor(index, train_mask_set)
-        ];    //
+        let color:any = [getCoraNodeColor(ground_truth_label, 2)];
+        for(let i = 0; i<selected_models_list.length; i++){
+            color.push(getCoraNodeColor(individual[selected_models_list[i]].graph_out.node_features[index]));
+        }
+        color.push(getTrainColor(index, train_mask_set));
         return color;
     }
     public hclusterSortingSelectedNode(params:any){
@@ -451,59 +439,42 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
     }
      public constructFeatureMatrixJson(graph_object:any, selectedNodeIdList:any[], axis_select:number, 
         distance_select:number, dataSource_select:number, color_encode:number, select_inspect_node:number, 
-        showSource:boolean, enableSorting:boolean, width:number, height:number, extendedMode:any, additional_params:any){
+        showSource:boolean, enableSorting:number, width:number, height:number, extendedMode:any, additional_params:any, selected_models_list:any){
         let max_col_num_block = additional_params["max_col_num_block"];
         let node_start_index = additional_params["node_start_index"];
-        // axis_select : 2, Y Axis
-        // distance_select: 1, Detailed Feature
-        // dataSource_select : 1, Input Layer
-        // color_encode: 2, Ground Truth
-        /**
-         * let dataSourceOptions = [
-                [1, "Input Layer"],
-                [2, "Hidden Layer"],
-                [3, "Output Layer"]
-            ];
-            let distanceOptions = [
-                [1, "Detailed Feature"],
-                [2, "Distance"]
-            ];
-
-            let axisOptions = [
-                [1, "X Axis"],
-                [2, "Y Axis"]
-            ];
-            let colorOptions = [
-                [2, "Ground Truth"],
-                [3, "Model Output"],
-                [5, "True / False"]
-            ]
-         */
         let selectedStr = selectedNodeIdList.join("_");
-        let common = graph_object;
-        let individual = graph_object;
-        let graph_name; 
-        let layout_mode = getLayoutMode();
-        if(layout_mode === 3){
-            common = graph_object.common;
-            individual = graph_object.individual;
-            graph_name = common.name+"_"+common.dataset_id+"_"+common.data_type_id+"_SELECTED_"+selectedStr+"_SELECTED_END_"
-            +axis_select+"_"+distance_select+"_"+dataSource_select+"_"+color_encode+"_"+select_inspect_node+"_"+enableSorting+"_"+width+"_"+height+"_"+this.props.K_value;
-            if(showSource){
-                graph_name = graph_name+"_"+extendedMode;
-            }else{
-                graph_name = graph_name+"_"+node_start_index+"_"+max_col_num_block;
+        let selectedModelStr = selected_models_list.join("_");
+        let common = graph_object.common;
+        let individual = graph_object.individual;
+        let graph_name = common.name+"_"+common.dataset_id+"_"+common.data_type_id+"_SELECTED_"+selectedStr+"_SELECTED_END_"
+        +axis_select+"_"+distance_select+"_"+dataSource_select+"_"+color_encode+"_"+select_inspect_node+"_"+enableSorting+"_"+width+"_"+height+"_"+this.props.K_value
+        +"_SELECTEDMODEL_"+selectedModelStr + "_SELECTEDMODELEND_";
+        if(showSource){
+            graph_name = graph_name+"_"+extendedMode;
+        }else{
+            graph_name = graph_name+"_"+node_start_index+"_"+max_col_num_block;
+        }
+        let subgraph_mode = false;
+        let feature_ranking_list = graph_object.feature_ranking_list;
+        let feature_ranking = graph_object.feature_ranking;
+        if(enableSorting >= 2 && feature_ranking_list.length>=enableSorting-1){
+
+            let fr_name = feature_ranking_list[enableSorting-2];
+
+            if(Object.keys(feature_ranking[fr_name]["feature_rank_values"]).indexOf(""+select_inspect_node)>=0){
+                let fr_list = feature_ranking[fr_name]["feature_rank_values"][select_inspect_node];
+                if(fr_list.length > 0){
+                    subgraph_mode = true;
+                }
             }
         }else{
-            graph_name = graph_object.name+"_"+graph_object.dataset_id+"_"+(graph_object.model)
-            +"_"+graph_object.explain_id 
-            +"_"+(graph_object.graph)+"_"+graph_object.data_type_id+"_SELECTED_"+selectedStr+"_SELECTED_END_"
-            +axis_select+"_"+distance_select+"_"+dataSource_select+"_"+color_encode;
+            subgraph_mode = false;
         }
 
         let graph_in = common.graph_in;
         let graph_target = common.graph_target;
-        //let graph_out = individual.GCN.graph_out; // 
+        let key_model_name = selected_models_list[0];
+
         let graph_explaination = common.graph_explaination;
         let explaination_type = graph_explaination.type;
         if(explaination_type !== "MessagePassing"){
@@ -514,8 +485,7 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
             return {"success":false};
 
         }
-        let message_passing: any = individual.GCN.message_passing;
-        let PathDict = constructPathDict(message_passing);
+
         let train_mask_set = new Set(common.mask.train);
         let features : any;
         let features_value:any = [];
@@ -525,15 +495,12 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
         }
         let getNodeColorInfoFull = this.getNodeColorInfoFull;
         function getNodeColorInfo(index:number){
-            return getNodeColorInfoFull(index, graph_target,individual, train_mask_set);
+            return getNodeColorInfoFull(index, graph_target,individual, train_mask_set, selected_models_list);
         }
         
         // Construct Indented Tree.
-        //let indentedTree:any = {}
         let indentedList:any = [];
         let selectedIndetendedListId:any = [];
-        //let selectedIndetendedTreeId:any[] = [];
-        //let selectedIndetendedTreeNodeInfo:any[] = [];
         
         if(showSource){
             let additional_params = {
@@ -541,14 +508,6 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
                 "features":features,
                 "features_value": features_value
             }
-            //indentedTree = this.constructIndentedTree(PathDict, select_inspect_node, 0, extendedMode-1, 0, select_inspect_node, additional_params);
-            //selectedIndetendedTreeId = this.sequentialIndentedTree(indentedTree);
-            //selectedIndetendedListNodeInfo = this.sequentialIndentedTreeToList(indentedTree);
-            //selectedIndetendedTreeId = selectedIndetendedTreeNodeInfo.map((d:any)=>{
-            //    return d.id;
-            //})
-            
-            //indentedList = this.constructIndentedList(PathDict, select_inspect_node, 0, extendedMode-1, additional_params);
             indentedList = this.constructIndentedListFromKFS(select_inspect_node, common.graph_additional_info.KFS, additional_params);
             selectedIndetendedListId = indentedList.map((d:any)=>{
                 return d.id;
@@ -560,11 +519,9 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
         let matrix:any[] = [];
         let selectedFeature:any[] = [];
         let selectedFeatureStatistics:any[] = [];
-        //let distance_mode = distance_select;
-
+        let selectedFeatureAddInfo:any[] = [];
         let upper_bound_nodes = 300;
         let highlight_flag:any = [];
-        let distance_list:any = [];
         let node_max_index = 0;
         function getArray(num:number){
             let arr : any[] = [];
@@ -627,12 +584,12 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
                 let pre_selected_feature_order_list:any[] = [];
                 let pre_selected_feature_stats_index:any[] = [];
                 let pre_selected_feature_prediction_label_distribution:any[] = [];
-                
                 for(let i = 0; i <selectedNodeIdList.length ; i++){
                     let currentSelect:any = selectedNodeIdList[i];
-                    let GCN_prediction_label = individual.GCN.graph_out.node_features[currentSelect]; 
+                    let GCN_prediction_label = individual[key_model_name].graph_out.node_features[currentSelect]; 
 
                     //y_axis.push(currentSelect);
+                    // Feature is sparse representation of current features > 0.
                     for(let j = 0;j <features[currentSelect].length;j ++){
                         let dimension = features[currentSelect][j];
                         if(pre_selected_feature.indexOf(dimension) >= 0){
@@ -713,9 +670,66 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
                 //console.log("after features", pre_selected_feature)
                 
                 //let enableSorting = 1;
-                if(enableSorting){
+                let pre_selected_feature_add_info:any = [];
+                if(enableSorting >=2 && subgraph_mode){
+                    
+                    let fr_name = feature_ranking_list[enableSorting-2];
+                    let fr_list = feature_ranking[fr_name]["feature_rank_values"][select_inspect_node];
+                    let current_feature = features[select_inspect_node];
+
                     let inspect_node = selectedNodeIdList[0];
-                    let inspect_node_GCN_prediction_label = individual.GCN.graph_out.node_features[inspect_node]; 
+                    let inspect_node_GCN_prediction_label = individual[key_model_name].graph_out.node_features[inspect_node]; 
+                    let sort_selected_feature_stats = pre_selected_feature_stats.map((d:any,i:any)=>{
+                        let first = 1;
+                        if(pre_selected_feature_order_list[i][0] === 0){
+                            first = 1;
+                        }else{
+                            first = 0;
+                        }
+                        let cf_idx = current_feature.indexOf(pre_selected_feature[i]);
+                        let pro = 0;
+                        if(cf_idx>=0){
+                            pro = fr_list[cf_idx];
+                        }
+                        return {
+                            "index":pre_selected_feature[i],
+                            "freq":d,
+                            "pro": pro,
+                            "first": first
+                        }
+                    })
+                    sort_selected_feature_stats.sort((a:any,b:any)=>{
+                        if(a.first > b.first){
+                            return -1;
+                        }else if(a.first < b.first){
+                            return 1;
+                        }else{
+                            if(a.pro>b.pro){
+                                return -1;
+                            }else if(a.pro<b.pro){
+                                return 1;
+                            }else{
+                                if(a.freq>b.freq){
+                                    return -1;
+                                }else{
+                                    return 1;
+                                }
+                            }
+                        }
+                        //return a.value > b.value ? -1: 1;
+                    })
+                    pre_selected_feature = sort_selected_feature_stats.map((d:any)=>{
+                        return d.index;
+                    })
+                    pre_selected_feature_stats = sort_selected_feature_stats.map((d:any)=>{
+                        return d.freq;
+                    })
+                    pre_selected_feature_add_info = sort_selected_feature_stats.map((d:any)=>{
+                        return d.pro
+                    });
+                }else if(enableSorting === 1){
+                    let inspect_node = selectedNodeIdList[0];
+                    let inspect_node_GCN_prediction_label = individual[key_model_name].graph_out.node_features[inspect_node]; 
                     let sort_selected_feature_stats = pre_selected_feature_stats.map((d:any,i:any)=>{
                         let first = 1;
                         if(pre_selected_feature_order_list[i][0] === 0){
@@ -801,7 +815,7 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
                 }
                 selectedFeature = pre_selected_feature;
                 selectedFeatureStatistics = pre_selected_feature_stats;
-
+                selectedFeatureAddInfo = pre_selected_feature_add_info;
                 // Step 4: construct matrix based on selected node id list and selectedFeature.
                 for(let i = 0; i <selectedNodeIdList.length ; i++){
                     let currentSelect:any = selectedNodeIdList[i];
@@ -832,19 +846,62 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
             selectedNodeColor.push(color);
         }
         let data_type = common.data_type_id;
+
         if(data_type === 2){
             let graph_info = common.graph_additional_info;
             let selectedFeatureLabel:any = [];
-            
+            let selectedFeatureTitle:any[] = [];
             if(Object.keys(graph_info).indexOf("idx_to_attr")>=0 && dataSource_select === 1){
                 let idx_to_attr = graph_info.idx_to_attr;
                 for(let i=0;i<selectedFeature.length; i++){
                     selectedFeatureLabel.push(idx_to_attr[selectedFeature[i]]);
+                    if(subgraph_mode){
+                        selectedFeatureTitle.push(idx_to_attr[selectedFeature[i]]+": "+selectedFeatureAddInfo[i].toFixed(4));
+                    }else{
+                        selectedFeatureTitle.push(idx_to_attr[selectedFeature[i]])
+                    }
                 }
+
             }else{
                 selectedFeatureLabel = selectedFeature;
+                //selectedFeatureTitle = selectedFeature;
+                
+                for(let i=0;i<selectedFeature.length; i++){
+                    if(subgraph_mode){
+                        selectedFeatureTitle.push(""+selectedFeature[i]+": "+selectedFeatureAddInfo[i].toFixed(4));
+                    }else{
+                        selectedFeatureTitle.push(""+selectedFeature[i])
+                    }
+                }
+
             }
-            
+            let y_axis_info = [];
+
+            if(Object.keys(graph_info).indexOf("idx_to_node_title")>=0){
+                let idx_to_node_title = graph_info.idx_to_node_title;
+                for(let i = 0; i<selectedNodeIdList.length; i++){
+                    let node_title = idx_to_node_title[selectedNodeIdList[i]];
+                    y_axis_info.push(""+selectedNodeIdList[i]+": "+node_title);
+                }
+                if(showSource){
+                    for(let i = 0; i<indentedList.length; i++){
+                        let id = indentedList[i]["id"];
+                        let node_title = idx_to_node_title[id];
+                        indentedList[i]["node_title"] = ""+id+": "+node_title;
+                    }
+                }
+                
+                console.log("y_axis_info: ", y_axis_info)
+            }else{
+                y_axis_info = selectedNodeIdList;
+                if(showSource){
+                    for(let i = 0; i<indentedList.length; i++){
+                        let id = indentedList[i]["id"];
+                        indentedList[i]["node_title"] = ""+id;
+                    }
+                }
+            }
+
             // Graph Json ------------------------------------------------------------
             let type : any;
             if(dataSource_select === 1){
@@ -890,15 +947,18 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
                 "matrix":matrix,
                 "x_axis":x_axis_data,
                 "y_axis":y_axis_data,
+                "y_axis_info":y_axis_info,
                 "distance_select": distance_select,
                 "type" : type,
                 "color_info": color_info,
                 "selectedFeatureStatistics":selectedFeatureStatistics,
+                "selectedFeatureTitle":selectedFeatureTitle,
                 "indentedList": indentedList,
                 //"indentedTree": indentedTree,
                 "showSource":showSource,
                 "highlight_flag":highlight_flag,
-                "verticalSliderConfig":verticalSliderConfig
+                "verticalSliderConfig":verticalSliderConfig,
+                "pieName": selected_models_list
             }
             
             return graph_json;
@@ -927,7 +987,7 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
             color_encode: color_encode
         })
     }
-    public onEnableSort(enableSorting: boolean){
+    public onEnableSort(enableSorting: number){
         this.setState({
             enableSorting: enableSorting
         })
@@ -938,7 +998,8 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
         })
     }
     public render() {
-        let {graph_object, specificNodeIdList} = this.props;
+        let {graph_object, specificNodeIdList, select_inspect_node} = this.props;
+
         let common;
         if(getLayoutMode()===3){
             common = graph_object.common;
@@ -963,10 +1024,12 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
             "max_col_num_block":max_col_num_block,
             "node_start_index":this.state.node_start_index
         }
+
         let feature_matrix_json = this.constructFeatureMatrixJson(graph_object, specificNodeIdList,
              this.state.axis_select, this.state.distance_select, this.state.dataSource_select, this.state.color_encode,
             this.props.select_inspect_node, this.props.showSource, this.state.enableSorting, this.props.width, this.props.height, 
-            this.props.extendedMode, additional_params);
+            this.props.extendedMode, additional_params, this.props.selected_models_list);
+
         if(explanation_type == "MessagePassing" && feature_matrix_json["success"]){
             let FeatureMatrixHeight = 180 + feature_matrix_json.y_axis.length * indentedtreeBarHeight + 20;
 
@@ -1004,23 +1067,54 @@ export default class FeatureMatrixView extends React.Component<IProps, IState>{
                 "name":"verticalslider_"+verticalSliderConfig["node_max_index"]
             }
             let onSelectSort = (e:any) =>{
-                if(e === 0){
+                this.onEnableSort(e)
+                /*if(e === 0){
                     this.onEnableSort(false);
                 }else{
                     this.onEnableSort(true);
-                }
+                }*/
             }
-            let getOptionValue = () =>{
+            /*let getOptionValue = () =>{
                 if(this.state.enableSorting){
                     return 1;
                 }else{
                     return 0;
                 }
-            }
+            }*/
+            let getOptionValue = () =>{
+                return this.state.enableSorting;
+            } 
             let SortOptions = [
                 [0, "Node order"],
                 [1, "Frequency of features"]
             ]
+
+            if(this.props.showSource){
+                let feature_ranking_list = graph_object.feature_ranking_list;
+                let feature_ranking = graph_object.feature_ranking;
+                //console.log("feature ranking list, feature ranking", feature_ranking_list, feature_ranking);
+                let found_extendedOptions = false;
+                let extendedMode = getOptionValue();
+                if(extendedMode <= 1){
+                    found_extendedOptions = true;
+                }
+                for (var fr_id = 0; fr_id < feature_ranking_list.length; fr_id++) {
+                    let fr_name = feature_ranking_list[fr_id];
+                    if(Object.keys(feature_ranking[fr_name]["feature_rank_values"]).indexOf(""+select_inspect_node)>=0){
+                        let fr_list = feature_ranking[fr_name]["feature_rank_values"][select_inspect_node];
+                        if(fr_list.length > 0){
+                            SortOptions.push([fr_id + 2, fr_name]);
+                            if(extendedMode == fr_id + 2){
+                                found_extendedOptions = true;
+                            }
+                        }
+                    }
+                }
+                if(!found_extendedOptions){
+                    onSelectSort(1);
+                }
+            }
+            
             return (            
             <div >
                 <div className="ViewTitle">Feature Matrix View

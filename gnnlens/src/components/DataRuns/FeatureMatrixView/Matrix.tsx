@@ -77,13 +77,17 @@ export default class Matrix extends React.Component<IProps, IState>{
         let margin = { top: 0, right: 30, bottom: 100, left: 0 },
           width = layout_config.width - margin.left - margin.right,
           y_axis = feature_matrix_json["y_axis"], // y_axis_name
+          y_axis_info = feature_matrix_json["y_axis_info"],
           x_axis = feature_matrix_json["x_axis"], // x_axis_name
+          selectedFeatureTitle = feature_matrix_json["selectedFeatureTitle"],
           data = feature_matrix_json["matrix"],
           type = feature_matrix_json["type"],
           color_info = feature_matrix_json["color_info"],
-          highlight_flag = feature_matrix_json["highlight_flag"];
-        
+          highlight_flag = feature_matrix_json["highlight_flag"],
+          pieName = feature_matrix_json["pieName"];
+        let models_length = pieName.length;
         let matrixFilters = this.props.MatrixFilters;
+      console.log("renderD3", y_axis_info)
       let matrixRowFilters = this.props.MatrixRowFilters;
       function transformDataTwoFilters(data:any, indexFilters:any, rowFilters:any){
         let newData:any = [];
@@ -148,11 +152,16 @@ export default class Matrix extends React.Component<IProps, IState>{
           let y_axis_color = color_info["y_axis_color"];
           if(matrixRowFilters.hasOwnProperty("row_index")&&showSource){
             x_axis = x_axis.slice(matrixFilters["index"][0], matrixFilters["index"][1]);
+            selectedFeatureTitle = selectedFeatureTitle.slice(matrixFilters["index"][0], matrixFilters["index"][1]);
             y_axis = transformYaxis(matrixRowFilters["row_index"], y_axis);
             y_axis_color = transformYaxis(matrixRowFilters["row_index"], y_axis_color);
+            y_axis_info = transformYaxis(matrixRowFilters["row_index"], y_axis_info);
+            console.log("Filtered y axis info", y_axis_info)
             data = transformDataTwoFilters(data, matrixFilters["index"], matrixRowFilters["row_index"]);
           }else{
             x_axis = x_axis.slice(matrixFilters["index"][0], matrixFilters["index"][1]);
+            selectedFeatureTitle = selectedFeatureTitle.slice(matrixFilters["index"][0], matrixFilters["index"][1]);
+
             data = transformDataOneFilter(data, matrixFilters["index"]);
           }
           
@@ -223,7 +232,12 @@ export default class Matrix extends React.Component<IProps, IState>{
       let transform_y = radius*2;
       let y_axis_label_enter = y_axis_labels.enter().append("g").attr("class", "y_axisLabel");
 
-          y_axis_label_enter.merge(y_axis_labels).attr("transform",(d:any, i:any) => "translate("+transform_x+"," + (i * gridSize + transform_y) + ")");
+          y_axis_label_enter.merge(y_axis_labels)
+          .attr("transform",(d:any, i:any) => "translate("+transform_x+"," + (i * gridSize + transform_y) + ")")
+          .on("mouseover", function(d:any,i:any){return tooltip_nodetitle.style("visibility", "visible").text(y_axis_info[i]);})
+            .on("mousemove", function(d:any,i:any){return tooltip_nodetitle.style("top", (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");})
+            .on("mouseout", function(d:any,i:any){return tooltip_nodetitle.style("visibility", "hidden");});;
+            ;
           y_axis_labels.exit().remove();
       let y_axis_label_color = "#000";
       function getArc(radius:number){
@@ -234,27 +248,27 @@ export default class Matrix extends React.Component<IProps, IState>{
       if(color_info["enable_y_axis_color"])
       {
         let y_axis_color = color_info["y_axis_color"];
-        
-        var arc_data = [{
-          "index":0,
-          "value":1/3
-        }, {
-            "index":1,
-            "value":1/3
-        }, {
-            "index":2,
-            "value":1/3
-        }];
+        var arc_data:any = [];
+        //console.log("Feature Matrix", models_length);
+        for(let i = 0; i<models_length; i++){
+            arc_data.push({
+                "index":i,
+                "value":1/models_length
+            })
+        }
+        let startAngle = -180 / models_length;
         var ori_arcs = d3.pie()
-        .startAngle((-60/180) * Math.PI)
-        .endAngle((2-60/180) * Math.PI)
+        .startAngle((startAngle/180) * Math.PI)
+        .endAngle((2+startAngle/180) * Math.PI)
         .value(function(a:any){
             return a.value;
         })
         .sort(function(a:any, b:any) {
             return a.index<b.index;
         });
+
         var arcs = ori_arcs(arc_data);
+        
         
 
         var outer_circles_enter = y_axis_label_enter.append("circle").attr("class","outer_circle");
@@ -269,7 +283,7 @@ export default class Matrix extends React.Component<IProps, IState>{
 
         
         let overall_background = [];
-        for (let i = 0; i < 3; i++){
+        for (let i = 0; i < models_length; i++){
             let background_enter = y_axis_label_enter.append("path").attr("class","arc_"+i)
             let background = y_axis_labels.select("path.arc_"+i);
             let background_enter_update  = background_enter.merge(background);
@@ -344,6 +358,9 @@ export default class Matrix extends React.Component<IProps, IState>{
       
       let x_axis_label_enter = x_axis_label.enter().append("g").attr("class","x_axisLabel");
         x_axis_label_enter.merge(x_axis_label).attr("transform",(d:any, i:any) => "translate(" + i * gridSize + ",0)")
+        .on("mouseover", function(d:any,i:any){return tooltip.style("visibility", "visible").text(selectedFeatureTitle[i]);})
+          .on("mousemove", function(d:any){return tooltip.style("top", (d3.event.pageY-10)+"px").style("left",(d3.event.pageX+10)+"px");})
+          .on("mouseout", function(d:any){return tooltip.style("visibility", "hidden");});
         x_axis_label.exit().remove();
       let x_axis_label_color = "#000";
       /*
@@ -453,6 +470,13 @@ export default class Matrix extends React.Component<IProps, IState>{
       
       var tooltip = d3.select("body")
                   .select("#tooltip_matrix")
+                  .style("position", "absolute")
+                  .style("z-index", "10")
+                  .style("visibility", "hidden")
+                  //.style("background","lightsteelblue"	)
+                  .text("a simple tooltip");
+      var tooltip_nodetitle = d3.select("body")
+                  .select("#tooltip_node_title")
                   .style("position", "absolute")
                   .style("z-index", "10")
                   .style("visibility", "hidden")

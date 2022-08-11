@@ -12,6 +12,8 @@ export type StoreState = {
     filters: any,
     selectedNodeIdList: any[],
     selectedMessagePassingNodeIdList: any[],
+    selected_models_list: any[],
+    models_list:any[],
     specificNodeIdList: any[],
 
     select_inspect_node : number
@@ -31,5 +33,6 @@ export type StoreState = {
     GraphViewSettingsModal_visible:boolean,
     FeatureMatrixViewSettingsModal_visible:boolean,
     GraphViewState:any,
-    K_value:any
+    K_value:any,
+    loading_dataset:boolean
 };

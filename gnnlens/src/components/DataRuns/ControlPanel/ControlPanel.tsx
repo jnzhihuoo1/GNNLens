@@ -1,6 +1,8 @@
 import * as React from 'react';
 import {Tabs, Table, Row,  Radio, Col, Slider, InputNumber} from 'antd';
 import DataSelectorContainer from '../../../container/DataSelectorContainer';
+import ModelSelectorContainer from '../../../container/ModelSelectorContainer';
+import ModelSelector from './ModelSelector';
 //const TabPane = Tabs.TabPane
 //const CheckboxGroup = Checkbox.Group;
 const RadioGroup = Radio.Group;
@@ -85,6 +87,11 @@ export default class ControlPanel extends React.Component<ControlPanelProps, Con
                     <Row>
                         <DataSelectorContainer />
                     </Row>
+                    {(this.props.dataset_id && this.props.dataset_id>=0)?
+                    <Row>
+                        <ModelSelectorContainer />
+                    </Row>:(<div />)
+                    }
                     {(this.props.dataset_id && this.props.dataset_id>=0)?<Row>
                         Inspect category:&nbsp;&nbsp;
                         <RadioGroup
@@ -103,7 +110,7 @@ export default class ControlPanel extends React.Component<ControlPanelProps, Con
                         <Row>K value:</Row>
                     
                 <Row>
-                    <Col span={18}>
+                    <Col span={16}>
                     <Slider
                         min={min_K_value}
                         max={max_K_value}

@@ -71,7 +71,7 @@ class App extends React.Component<IProps, IState> {
     return (
       <Layout className="app" >
           <Header className='appHeader'>
-          GNNVis
+          GNNLens
                   <img src={logo} className='appLogo' alt-text="logo"/>
           </Header>
           <Content className='appContent' >
@@ -80,6 +80,7 @@ class App extends React.Component<IProps, IState> {
               </div>
               <div id="tooltip_proj" />
               <div id="tooltip_matrix" />
+              <div id="tooltip_node_title" />
           </Content>
       </Layout>
     );

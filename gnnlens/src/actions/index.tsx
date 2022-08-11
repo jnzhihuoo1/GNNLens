@@ -6,7 +6,8 @@ import {MODEL_CHANGE, GRAPH_CHANGE, INIT_MODEL_LIST, EXPLAIN_METHOD_ID_CHANGE,
     ,INSPECT_CATEGORY_LIST_CHANGE, PSJSON_CHANGE, PSSELECTEDNODES_CHANGE, EXTENDED_MODE_CHANGE, PROJECTIONVIEWSELECTEDNODES_CHANGE,
     PROJECTIONVIEWTOTALNODENUM_CHANGE, PSSETTINGMODAL_VISIBLE_CHANGE, PSDIMENSIONS_CHANGE,
     PROJECTIONVIEWSETTINGMODAL_VISIBLE_CHANGE, GRAPHVIEWSETTINGMODAL_VISIBLE_CHANGE,
-    FEATUREMATRIXVIEWSETTINGMODAL_VISIBLE_CHANGE, GRAPHVIEWSTATE_CHANGE, KVALUE_CHANGE} from '../constants';
+    FEATUREMATRIXVIEWSETTINGMODAL_VISIBLE_CHANGE, GRAPHVIEWSTATE_CHANGE,
+     KVALUE_CHANGE, SELECTEDMODELS_CHANGE, MODELSLIST_CHANGE, CHANGE_LOADING_DATASET} from '../constants';
 
 // Define Change Model Methods
 export const changeModel = (model:number | null) =>({
@@ -88,7 +89,14 @@ export const changeK_value = (K_value:any) =>({
     type: KVALUE_CHANGE,
     K_value: K_value
 })
-
+export const changeModelsList = (value:any) => ({
+    type: MODELSLIST_CHANGE,
+    models_list:value
+})
+export const changeSelectedModels = (value:any) => ({
+    type: SELECTEDMODELS_CHANGE,
+    selected_models_list: value
+})
 
 export const changePSDimensions = (PSDimensions:any[]) =>({
     type: PSDIMENSIONS_CHANGE,
@@ -147,7 +155,10 @@ export const initGraphList = (graphList:any) =>({
     type: INIT_GRAPH_LIST,
     graphList: graphList
 })
-
+export const changeLoadingDataset = (loading_dataset:any) => ({
+    type: CHANGE_LOADING_DATASET,
+    loading_dataset: loading_dataset
+})
 
 /*import { DECREMENT, INCREMENT } from '../constants';
 

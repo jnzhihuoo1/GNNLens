@@ -42,7 +42,8 @@ export interface ProjectionViewProps {
     dataPackage:any,
     updateSingleHighlightNodeStatus:any,
     enableLegends:boolean,
-    layoutMode:number
+    layoutMode:number,
+    graph_additional_info:any
 }
 
 export interface ProjectionViewState {
@@ -154,7 +155,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
      * @param radius 
      * @param scale 
      */
-    public renderGlyphGT3PT(nodes:any,node_enter:any,radius_gap:number,radius:number,scale:number=1,enable_size:boolean=false){
+    public renderGlyphGT3PT(nodes:any,node_enter:any,radius_gap:number,radius:number,additional_info:any,scale:number=1,enable_size:boolean=false){
         // 1 -> ground truth label / prediction label
         let getArc = this.getArc;
         let getArcConf = this.getArcConf;
@@ -163,15 +164,18 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         var outer_circles_enter = node_enter.append("circle").attr("class","proj_outer_circle");
         var outer_circles = nodes.select("circle.proj_outer_circle");
         var outer_circles_enter_update = outer_circles_enter.merge(outer_circles);
-
-
+        let pie_name = additional_info["pie_name"];
+        let key_model_name = pie_name[0];
+        let fill_color_index = pie_name.length + 1;
+        let models_length = pie_name.length;
+        // TODOS:
         outer_circles_enter_update//.transition(trans)
                     .attr("r", function(d:any){
                         let s_scale = (enable_size)?getSizeScale(d.data.size):1;
                         return radius*scale*s_scale*2;
                     })
-                    .attr("fill", function(d:any) { return d.data.Color[4]; });
-
+                    .attr("fill", function(d:any) { return d.data.Color[fill_color_index]; });
+        /*
         var arc_data = [{
             "index":0,
             "value":1/3
@@ -181,10 +185,18 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         }, {
             "index":2,
             "value":1/3
-        }];
+        }];*/
+        var arc_data:any = [];
+        for(let i = 0; i<models_length; i++){
+            arc_data.push({
+                "index":i,
+                "value":1/models_length
+            })
+        }
+        let startAngle = -180 / models_length;
         var ori_arcs = d3.pie()
-        .startAngle((-60/180) * Math.PI)
-        .endAngle((2-60/180) * Math.PI)
+        .startAngle((startAngle/180) * Math.PI)
+        .endAngle((2+startAngle/180) * Math.PI)
         .value(function(a:any){
             return a.value;
         })
@@ -193,7 +205,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         });
         var arcs = ori_arcs(arc_data);
         let overall_background = [];
-        for (let i = 0; i < 3; i++){
+        for (let i = 0; i < models_length; i++){
             let background_enter = node_enter.append("path").attr("class","arc_"+i)
             let background = nodes.select("path.arc_"+i);
             let background_enter_update  = background_enter.merge(background);
@@ -228,8 +240,8 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         let outer_radius = 2*radius + 2;
         let stroke_width = 1;
         for (let i = 3; i < 5; i++){
-            let background_enter = node_enter.append("path").attr("class","arc_"+i)
-            let background = nodes.select("path.arc_"+i);
+            let background_enter = node_enter.append("path").attr("class","carc_"+i)
+            let background = nodes.select("path.carc_"+i);
             let background_enter_update  = background_enter.merge(background);
             background_enter_update
             .style("fill", function(d:any){
@@ -244,11 +256,11 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                 var arc_data =[
                     {
                         "index":0,
-                        "value":d.data.GCN_Confidence
+                        "value":d.data[key_model_name+"_Confidence"]
                     },
                     {
                         "index":1,
-                        "value":1 - d.data.GCN_Confidence
+                        "value":1 - d.data[key_model_name+"_Confidence"]
                     }
                 ] ;
                 
@@ -285,8 +297,10 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
      * @param radius_gap 
      * @param radius 
      */
-    public renderLegendGT3PT(legend_svg:any, refresh_number:number, radius_gap:number, radius:number, legend_configuration:any){
+    public renderLegendGT3PT(legend_svg:any, refresh_number:number, radius_gap:number, radius:number, legend_configuration:any, additional_info:any){
         let constructPathOnNodeList = this.constructPathOnNodeList;
+        let pie_name = additional_info["pie_name"];
+        let key_model_name = pie_name[0]
         // Define Variable
         let legend_x = legend_configuration["legend_x"];
         let legend_y = legend_configuration["legend_y"];
@@ -294,13 +308,17 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         let legend_Color = legend_configuration["legend_Color"];
         
         let legend_conf = legend_configuration["legend_conf"];
+        let key_model_confidence = key_model_name+"_Confidence";
+        
+        let models_length = pie_name.length;
+        let last_fill_index = models_length + 1;
         let legend_data_point:any = {
             "data":{
                 "Color": legend_Color,
-                "Data_id": refresh_number,
-                "GCN_Confidence": legend_conf
+                "Data_id": refresh_number
             }
         }
+        legend_data_point["data"][key_model_confidence] = legend_conf;
         let legend_text_setting = legend_configuration["legend_text_setting"]
         
         let outer_radius = 2*radius + 2;
@@ -314,11 +332,11 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         let legend_pie = legend_pie_all.enter().append("g")
                         .attr("class", "legend_pie")
                         .attr("transform", "translate("+legend_x+","+legend_y+")")
-        this.renderGlyphGT3PT(legend_pie_all, legend_pie, radius_gap, radius, legned_scale);
+        this.renderGlyphGT3PT(legend_pie_all, legend_pie, radius_gap, radius, additional_info, legned_scale);
         
 
         // ----- Render Legend Text
-        for(let i = 0; i<3; i++){
+        for(let i = 0; i<models_length; i++){
             //overall_background.push(background_enter_update);
 
             let start_point = [1.5*legned_scale*radius*Math.sin((+120*i)/180*Math.PI), 1.5*legned_scale*radius*(-Math.cos((+120*i)/180*Math.PI))]
@@ -363,7 +381,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                 .attr("dominant-baseline", legend_text_setting[0]["dominant-baseline"])
                 .text(legend_text_setting[0]["text"])
         gt_x = 3.5*legned_scale*radius*Math.sin((+90)/180*Math.PI);
-        gt_y = 3.5*legned_scale*radius*(-Math.cos((+90)/180*Math.PI))+legend_text_setting[4]["y_offset"];
+        gt_y = 3.5*legned_scale*radius*(-Math.cos((+90)/180*Math.PI))+legend_text_setting[last_fill_index]["y_offset"];
         legend_pie.append("line")
                 .attr("stroke", legend_line_style["stroke"])
                 .attr("stroke-width", legend_line_style["stroke-width"])
@@ -375,9 +393,9 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         legend_pie.append("text")
                 .attr("x", gt_x)
                 .attr("y", gt_y)
-                .attr("text-anchor", legend_text_setting[4]["text-anchor"])
-                .attr("dominant-baseline", legend_text_setting[4]["dominant-baseline"])
-                .text(legend_text_setting[4]["text"])
+                .attr("text-anchor", legend_text_setting[last_fill_index]["text-anchor"])
+                .attr("dominant-baseline", legend_text_setting[last_fill_index]["dominant-baseline"])
+                .text(legend_text_setting[last_fill_index]["text"])
         
     }
     public renderGlyphDEGCN(nodes:any,node_enter:any,radius:number,additional_info:any, scale:number=1,enable_size:boolean=false){
@@ -420,7 +438,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                         let s_scale = (enable_size)?getSizeScale(d.data.size):1;
                         return radius*2*scale*s_scale
                     })
-                    .attr("fill", function(d:any) { return d.data.Color[4]; });
+                    .attr("fill", function(d:any) { return d.data.Color[d.data.Color.length-1]; });
         /*var outer_polygon_enter = node_enter.append("polygon").attr("class", "sp_polygon_outer");
         var outer_polygons = nodes.select("polygon.sp_polygon_outer");
         var outer_polygon_enter_update = outer_polygon_enter.merge(outer_polygons);
@@ -534,7 +552,8 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                         let s_scale = (enable_size)?getSizeScale(d.data.size):1; 
                         return rect_height * s_scale;
                     })
-                    .attr("fill", function(d:any) { return d.data.Color[4]; });
+                    .attr("fill", function(d:any) { 
+                        return d.data.Color[d.data.Color.length-1]; });
                     //.style("stroke","#bbb")
                     //.style("stroke-width",1);
         let rect_gap = 0.25;
@@ -832,7 +851,9 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                         let s_scale = (enable_size)?getSizeScale(d.data.size):1; 
                         return rect_height * s_scale;
                     })
-                    .attr("fill", function(d:any) { return d.data.Color[4]; });
+                    .attr("fill", function(d:any) { 
+                        
+                        return d.data.Color[d.data.Color.length - 1]; });
                    // .style("stroke","#bbb")
                    // .style("stroke-width",1);
 
@@ -1017,6 +1038,33 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
             this.wrapLines(text);
         }
     }
+    public renderColorLegend(legend_color_svg:any, colorLegend:number){
+        console.log("Rendering Color Legend in Projection View...", legend_color_svg, colorLegend);
+
+        let row_legend_color = legend_color_svg.selectAll("g.legend_row_color")
+                                .data(colorLegend, function(d:any,i:any){
+                                    return d.text+"_"+i+"_"+d.color;
+                                });
+        let g_row_legend_color = row_legend_color.enter().append("g")
+                            .attr("class","legend_row_color")
+                            .attr("transform", function(d:any,i:any){
+                                return "translate(10,"+(10+i*20)+")";
+                            });
+            g_row_legend_color.append("circle")
+                            .attr("r", 5)
+                            .attr("fill", function(d:any){
+                                return d.color;
+                            })
+                            
+            g_row_legend_color.append("text")
+                            .attr("x", 10)
+                            .attr("y", 5)
+                            .text(function(d:any){
+                                return d.text;
+                            })
+                            
+            row_legend_color.exit().remove();
+     }
     public renderLegend(data_package:any){
         let configuration = data_package["configuration"];
         let tooltip_svg = data_package["tooltip_svg"];
@@ -1037,9 +1085,9 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                 .attr("transform","translate("+legend_pie_x+","+legend_pie_y+")")
         e.refresh_number = e.refresh_number + 1;
         var pie_name = additional_info["pie_name"];
-        var P1_name = pie_name[0];
-        var P2_name = pie_name[1];
-        var P3_name = pie_name[2];
+        var key_model_name = pie_name[0];
+        //var P2_name = pie_name[1];
+        //var P3_name = pie_name[2];
         if(showMode === 1){
             let legend_x = 30;
             let legend_y = 50;
@@ -1056,32 +1104,24 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                     "text-anchor":"begin",
                     "dominant-baseline":"central",
                     "y_offset":+1
-                },
-                {
-                    "text":P1_name,
-                    "text-anchor":"begin",
-                    "dominant-baseline":"central",
-                    "y_offset":-7.5
-                },
-                {
-                    "text":P2_name,
-                    "text-anchor":"begin",
-                    "dominant-baseline":"central",
-                    "y_offset":0
-                },
-                {
-                    "text":P3_name,
-                    "text-anchor":"begin",
-                    "dominant-baseline":"central",
-                    "y_offset":+19
-                },
-                {
-                    "text":"Conf.",
-                    "text-anchor":"begin",
-                    "dominant-baseline":"central",
-                    "y_offset":0
-                },
+                }
             ]
+            let y_offset_list = [-7.5, 0, +19]
+            for(let i =0; i<pie_name.length; i++){
+                legend_text_setting.push({
+                    "text":pie_name[i],
+                    "text-anchor":"begin",
+                    "dominant-baseline":"central",
+                    "y_offset":y_offset_list[i]
+                })
+            }
+            legend_text_setting.push({
+                "text":"Conf.",
+                "text-anchor":"begin",
+                "dominant-baseline":"central",
+                "y_offset":0
+            })
+
             /** "text":"Confidence" */
             let legend_configuration = {
                 "legend_x":legend_x,
@@ -1091,7 +1131,17 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                 "legend_conf":legend_conf,
                 "legend_text_setting":legend_text_setting
             }
-            this.renderLegendGT3PT(legend_svg, e.refresh_number, radius_gap, radius, legend_configuration);
+            this.renderLegendGT3PT(legend_svg, e.refresh_number, radius_gap, radius, legend_configuration, additional_info);
+            
+            // render color legend.
+            if(legendMode === 2){
+                let color_svg = data_package["color_svg"];
+                let colorLegend = data_package["colorLegend"];
+                this.renderColorLegend(color_svg, colorLegend);
+            }
+            
+
+
         }else if(showMode === 2){
             let legend_x = 30;
             let legend_y = 45;
@@ -1169,7 +1219,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
             let legend_Color = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#fff"];
             let legend_text_setting = [
                 {
-                    "text":P1_name,
+                    "text":key_model_name,
                     "text-anchor":"begin",
                     "dominant-baseline":"central",
                     "y_offset":0
@@ -1236,7 +1286,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
             let legend_Topkfs_node_info = [0.2, 0.2, 0.2, 0.2, 0.2];
             let legend_text_setting = [
                 {
-                    "text":P1_name,
+                    "text":key_model_name,
                     "text-anchor":"begin",
                     "dominant-baseline":"central",
                     "y_offset":0
@@ -1408,47 +1458,42 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         e.refresh_number = e.refresh_number + 1;
         
         var pie_name = additional_info["pie_name"];
-        var P1_name = pie_name[0];
-        var P2_name = pie_name[1];
-        var P3_name = pie_name[2];
+        var key_model_name = pie_name[0];
+        //var P2_name = pie_name[1];
+        //var P3_name = pie_name[2];
         if(showMode === 1){
             let legend_x = 30;
             let legend_y = 50;
             let legned_scale = 2;
             let legend_Color = data_point["Color"];
-            let legend_conf = data_point["GCN_Confidence"];
+            let legend_conf = data_point[key_model_name+"_Confidence"];
             let legend_text_setting = [
                 {
                     "text":"Label:"+data_point["Ground_Truth_Label"],
                     "text-anchor":"begin",
                     "dominant-baseline":"central",
                     "y_offset":+1
-                },
-                {
-                    "text":P1_name+":"+data_point["GCN_Prediction_Label"],
-                    "text-anchor":"begin",
-                    "dominant-baseline":"central",
-                    "y_offset":-7.5
-                },
-                {
-                    "text":P2_name+":"+data_point["GCN(w/o_adj)_Prediction_Label"],
-                    "text-anchor":"begin",
-                    "dominant-baseline":"central",
-                    "y_offset":0
-                },
-                {
-                    "text":P3_name+":"+data_point["GCN(w/o_features)_Prediction_Label"],
-                    "text-anchor":"begin",
-                    "dominant-baseline":"central",
-                    "y_offset":+19
-                },
-                {
-                    "text":"Confidence:"+data_point["GCN_Confidence"].toFixed(2),
-                    "text-anchor":"begin",
-                    "dominant-baseline":"central",
-                    "y_offset":0
-                },
+                }
             ]
+            let y_offset_list = [-7.5, 0, +19]
+            for(let i = 0; i<pie_name.length; i++){
+                legend_text_setting.push({
+                    "text":pie_name[i]+":"+data_point[pie_name[i]+"_Prediction_Label"],
+                    "text-anchor":"begin",
+                    "dominant-baseline":"central",
+                    "y_offset":y_offset_list[i]
+                })
+            }
+            legend_text_setting.push(
+                {
+                    "text":"Confidence:"+data_point[key_model_name+"_Confidence"].toFixed(2),
+                    "text-anchor":"begin",
+                    "dominant-baseline":"central",
+                    "y_offset":0
+                }
+            )
+                
+
             let legend_configuration = {
                 "legend_x":legend_x,
                 "legend_y":legend_y,
@@ -1457,7 +1502,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                 "legend_conf":legend_conf,
                 "legend_text_setting":legend_text_setting
             }
-            this.renderLegendGT3PT(legend_svg, e.refresh_number, radius_gap, radius, legend_configuration);
+            this.renderLegendGT3PT(legend_svg, e.refresh_number, radius_gap, radius, legend_configuration, additional_info);
         }else if(showMode === 2){
             let legend_x = 30;
             let legend_y = 45;
@@ -1516,7 +1561,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
             let legend_transformed_distance = data_point["Transformed_Distance"];
             let legend_text_setting = [
                 {
-                    "text":P1_name+":"+data_point["GCN_Prediction_Label"],
+                    "text":key_model_name+":"+data_point[key_model_name+"_Prediction_Label"],
                     "text-anchor":"begin",
                     "dominant-baseline":"central",
                     "y_offset":0
@@ -1553,7 +1598,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
             let legend_Topkfs_node_info = data_point["Topkfs_node_info"];
             let legend_text_setting = [
                 {
-                    "text":P1_name+":"+data_point["GCN_Prediction_Label"],
+                    "text":key_model_name+":"+data_point[key_model_name+"_Prediction_Label"],
                     "text-anchor":"begin",
                     "dominant-baseline":"central",
                     "y_offset":0
@@ -1597,6 +1642,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
             "height": this.props.height
         }
         let additional_info = this.additional_info;
+        let graph_additional_info = this.props.graph_additional_info;
         var width = configuration["width"];
         var height = configuration["height"]; // rect height
         if(height<1){
@@ -1625,17 +1671,21 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         var legend_height = legendHeight + legend_top_padding;
         var legend_width = legendWidth + legend_left_padding;
         legend_width = Math.min(width, legend_width);
+        // --> legend_left_padding --> legendWidth
+        //  || blank || legendHeight || legend_top_padding
         d3.select("#ScatterPlot_sub_legend"+this.props.id).remove();
+        d3.select("#ScatterPlot_sub_colorlegend"+this.props.id).remove();
         var legend_top_svg = d3.select("#TopSVGChart_ScatterPlot_Legend_"+this.props.id);
 
         if(enableLegends){
             console.log("Enable projection view legends rendering...")
             
-
+            let legend_glyph_y = height-legend_height;
+            // Position (legend_left_padding, height - legend_top_padding - legendHeight)
             var legend_svg = legend_top_svg.append("g")
             .attr("id","ScatterPlot_sub_legend"+this.props.id)
             .attr("transform", function() {
-                return "translate(" + legend_left_padding + "," +  (height-legend_height) + ")";
+                return "translate(" + legend_left_padding + "," +  (legend_glyph_y) + ")";
                 })
             .attr("width", legend_width - legend_left_padding)
             .attr("height", legend_height-legend_top_padding);
@@ -1650,8 +1700,8 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
             .attr("fill-opacity",0.9)
             .attr("stroke-opacity",0.5)
             ;
-
-            var data_package = {
+            // Rect [0, 0, legendWidth, legendHeight]
+            var data_package:any = {
                 "configuration":configuration,
                 "tooltip_svg":legend_svg,
                 "additional_info":additional_info,
@@ -1659,6 +1709,79 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
                 "showMode": showMode,
                 "legendMode": 2
             }
+            if(showMode === 1)
+            {
+
+                let getColorLegend = () =>{
+                    let graph_info = graph_additional_info;
+                    //let graph_info = common.graph_additional_info;
+                    let num_class = graph_info.num_class;
+                    let label = [];
+                    if(Object.keys(graph_info).indexOf("idx_to_class")>=0){
+                        let idx_to_class = graph_info.idx_to_class;
+                        for(let i = 0; i< num_class;i++){
+                            label.push({
+                                "text":""+i+":"+idx_to_class[i],
+                                "color":getCoraNodeColor(i,2)
+                            })
+                        }
+                    }else{
+                        for(let i = 0; i< num_class;i++){
+                            label.push({
+                                "text":i,
+                                "color":getCoraNodeColor(i,2)
+                            })
+                        }
+                    }
+                    return label;
+                }
+                let colorLegend = getColorLegend();
+                let legend_color_x = 10;
+
+                // ---- Calculate the legend color width and height.
+                let max_text_length = 0;
+                colorLegend.forEach((d:any)=>{
+                    let text = "" + d.text;
+                    if(text.length>max_text_length){
+                        max_text_length = text.length;
+                    }
+                })
+                
+                let legend_color_width = max_text_length*8+24;
+                //console.log("maxtextlength", max_text_length, legend_color_width);
+                let legend_color_height = colorLegend.length*20;
+                // ----------------------------------------------
+    
+                // || blank || legend_color_height || 10 || legend_glyph_y           
+                let legend_color_y = legend_glyph_y - 10 - legend_color_height;
+    
+                var legend_color_svg = legend_top_svg.append("g")
+                    .attr("id", "ScatterPlot_sub_colorlegend"+this.props.id)
+                    .attr("width", legend_color_width)
+                    .attr("height", legend_color_height)
+                    .attr("transform", "translate("+legend_color_x+","+legend_color_y+")")
+                let legend_rect = legend_color_svg.selectAll("rect").data([0]);
+                let legend_rect_enter = legend_rect.enter().append("rect");
+                //console.log("legend_rect", legend_rect);
+                legend_rect_enter.merge(legend_rect)
+                    .attr("x", 0)
+                    .attr("y", 0)
+                    .attr("width", legend_color_width)
+                    .attr("height", legend_color_height)
+                    .attr("fill", "#fff")
+                    .attr("opacity", 0.8)
+                    .attr("stroke", "#bbb")
+                    .attr("stroke-width", 1)
+                    .attr("rx",3)
+                    .attr("ry",3);
+    
+                data_package["color_svg"] = legend_color_svg;
+                data_package["colorLegend"] = colorLegend;
+
+            }
+            
+
+           
             this.renderLegend(data_package);
         }else{
             console.log("Not Enable projection view legends...")
@@ -1700,6 +1823,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
         let layoutMode = this.props.layoutMode;
         d3.select("#ScatterPlot_sub_"+this.props.id).remove();
         d3.select("#ScatterPlot_Legend_sub_"+this.props.id).remove();
+        d3.select("#ScatterPlot_sub_colorlegend"+this.props.id).remove();
         if(point_array.length <= 0){
             return;
         }
@@ -1800,7 +1924,7 @@ export default class ProjectionView extends React.Component<ProjectionViewProps,
 
         if(showMode === 1){
             //enable_size = true;
-            this.renderGlyphGT3PT(nodes, node_enter, radius_gap, radius,1, enable_size);
+            this.renderGlyphGT3PT(nodes, node_enter, radius_gap, radius,additional_info,1, enable_size);
         }else if(showMode === 2){
             //enable_size = true;
             // 2 -> shortest path distance / center neighbor consistency rate.

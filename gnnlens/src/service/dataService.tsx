@@ -6,7 +6,7 @@ import axios from 'axios';
 //const URL = "http://localhost:7777"
 //const obj = require("gzip-loader!file.js.gz");
 //console.log("public obj", obj);
-const ENABLE_STATIC_JSON = false;
+const ENABLE_STATIC_JSON = true;
 const VERSION = "V1_2";
 const URL = process.env.NODE_ENV === 'development'
     ? 'http://localhost:7777'
