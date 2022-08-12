@@ -10,7 +10,7 @@ The demo is available at: [https://gnnlens.github.io/](https://gnnlens.github.io
 
 ## Demo Reproduction
 
-We provide one jupyter notebook "examples/prepare_examples_data.ipynb" to reproduce the data used in the [demo](https://gnnlens.github.io/).
+We provide one jupyter notebook [examples/prepare_examples_data.ipynb](examples/prepare_examples_data.ipynb) to reproduce the data used in the [demo](https://gnnlens.github.io/).
 
 The data will be generated in the folder "examples/examples_data".
 
