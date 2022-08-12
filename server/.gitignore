@@ -1,4 +1,7 @@
 # ignore log files and saved models/metrics
+build/
+dist/
+gnnlens.egg-info/
 models/
 metrics/
 logs/

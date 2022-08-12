@@ -1,0 +1,4 @@
+./examples_data
+./rawdata
+__pycache__
+.ipynb_checkpoints
