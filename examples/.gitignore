@@ -2,3 +2,6 @@
 ./rawdata
 __pycache__
 .ipynb_checkpoints
+rawdata
+examples_data
+examples_data2
